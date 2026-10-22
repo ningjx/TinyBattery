@@ -29,6 +29,7 @@ public static class AppServiceCollectionExtensions
         services.AddHostedService<DeviceMonitorService>();
         services.AddHostedService<TrayHostedService>();
         services.AddTransient<SettingsWindow>();
+        services.AddTransient<AboutWindow>();
 
         return services;
     }

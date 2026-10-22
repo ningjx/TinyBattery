@@ -26,6 +26,7 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
     private MenuItem? _batteryItem;
     private MenuItem? _devicesMenu;
     private SettingsWindow? _settingsWindow;
+    private AboutWindow? _aboutWindow;
     private BatteryIconState _lastState = new(null);
     private string _lastToolTip = "TinyBattery · 未选择设备";
     private string? _lastDisplaySignature;
@@ -67,6 +68,9 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         var settings = new MenuItem { Header = "设置" };
         settings.Click += (_, _) => ShowSettings();
 
+        var about = new MenuItem { Header = "关于 TinyBattery" };
+        about.Click += (_, _) => ShowAbout();
+
         var exit = new MenuItem { Header = "退出" };
         exit.Click += (_, _) => Application.Current.Shutdown();
 
@@ -76,6 +80,7 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         menu.Items.Add(new Separator());
         menu.Items.Add(reload);
         menu.Items.Add(settings);
+        menu.Items.Add(about);
         menu.Items.Add(new Separator());
         menu.Items.Add(exit);
         menu.Opened += (_, _) => RefreshFromState();
@@ -120,6 +125,19 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         }
 
         ApplyBattery();
+    }
+
+    public void Refresh()
+    {
+        var dispatcher = Application.Current.Dispatcher;
+        if (dispatcher.CheckAccess())
+        {
+            RefreshFromState();
+        }
+        else
+        {
+            dispatcher.BeginInvoke(RefreshFromState);
+        }
     }
 
     private void ApplyBattery()
@@ -338,11 +356,26 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         _settingsWindow.Activate();
     }
 
+    private void ShowAbout()
+    {
+        if (_aboutWindow is not null)
+        {
+            _aboutWindow.Activate();
+            return;
+        }
+
+        _aboutWindow = _services.GetRequiredService<AboutWindow>();
+        _aboutWindow.Closed += (_, _) => _aboutWindow = null;
+        _aboutWindow.Show();
+        _aboutWindow.Activate();
+    }
+
     public void Dispose()
     {
         _icons.ThemeChanged -= OnThemeChanged;
         _state.Updated -= OnStateUpdated;
         _settingsWindow?.Close();
+        _aboutWindow?.Close();
         _tray?.Dispose();
         _tray = null;
     }

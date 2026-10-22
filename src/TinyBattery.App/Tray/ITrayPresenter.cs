@@ -7,4 +7,6 @@ public interface ITrayPresenter : IDisposable
     void Start();
 
     void SetBattery(BatteryIconState state, string toolTip);
+
+    void Refresh();
 }

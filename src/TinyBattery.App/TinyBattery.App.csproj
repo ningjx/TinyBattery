@@ -8,6 +8,10 @@
     <RootNamespace>TinyBattery.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Version>0.1.0</Version>
+    <Product>TinyBattery</Product>
+    <Company>Ning</Company>
+    <Description>Tray battery monitor with plugin-provided devices and icon themes.</Description>
   </PropertyGroup>
 
   <ItemGroup>
