@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TinyBattery.Abstractions\TinyBattery.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JsonSchema.Net" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\schemas\device-definition.schema.json"
+                      Link="Schemas\device-definition.schema.json">
+      <LogicalName>TinyBattery.Core.Schemas.device-definition.schema.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\schemas\icon-theme.schema.json"
+                      Link="Schemas\icon-theme.schema.json">
+      <LogicalName>TinyBattery.Core.Schemas.icon-theme.schema.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\schemas\package.schema.json"
+                      Link="Schemas\package.schema.json">
+      <LogicalName>TinyBattery.Core.Schemas.package.schema.json</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

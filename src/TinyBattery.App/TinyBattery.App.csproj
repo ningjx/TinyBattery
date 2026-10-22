@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>TinyBattery</AssemblyName>
+    <RootNamespace>TinyBattery.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TinyBattery.Abstractions\TinyBattery.Abstractions.csproj" />
+    <ProjectReference Include="..\TinyBattery.Core\TinyBattery.Core.csproj" />
+    <ProjectReference Include="..\TinyBattery.Infrastructure\TinyBattery.Infrastructure.csproj" />
+    <ProjectReference Include="..\TinyBattery.Protocols\TinyBattery.Protocols.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="H.NotifyIcon.Wpf" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+</Project>

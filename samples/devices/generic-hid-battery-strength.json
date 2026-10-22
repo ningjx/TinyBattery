@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "generic.hid-battery-strength",
+  "displayName": "Generic HID Battery Strength",
+  "vendor": "Generic",
+  "enabled": false,
+  "match": {
+    "transport": "hid",
+    "usagePage": 6,
+    "usage": 32
+  },
+  "protocol": {
+    "kind": "hid.input-report",
+    "options": {
+      "reportId": 0,
+      "extract": {
+        "percent": {
+          "offset": 0,
+          "type": "u8",
+          "min": 0,
+          "max": 100
+        }
+      }
+    }
+  },
+  "polling": {
+    "intervalSeconds": 60,
+    "timeoutSeconds": 2
+  }
+}

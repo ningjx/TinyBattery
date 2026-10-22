@@ -1,0 +1,63 @@
+{
+  "$schema": "../../../../schemas/device-definition.schema.json",
+  "schemaVersion": 1,
+  "id": "lofree.flow-lite",
+  "displayName": "Lofree Flow Lite",
+  "vendor": "Lofree",
+  "enabled": true,
+  "priority": 0,
+  "match": {
+    "transport": "hid",
+    "vendorId": 1452,
+    "productId": 591,
+    "usagePage": 65282,
+    "interface": "MI_01",
+    "inputReportLength": 17,
+    "outputReportLength": 17
+  },
+  "protocol": {
+    "kind": "hid.request-response",
+    "options": {
+      "reportId": 8,
+      "includeReportId": true,
+      "timeoutMs": 2000,
+      "request": {
+        "payload": [4, 0, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "checksum": {
+          "kind": "sum8",
+          "range": [0, 15],
+          "target": 85,
+          "at": 16
+        }
+      },
+      "response": {
+        "match": [
+          { "offset": 0, "equals": 8 },
+          { "offset": 1, "equals": 4 }
+        ],
+        "minLength": 7
+      },
+      "extract": {
+        "percent": {
+          "offset": 6,
+          "type": "u8",
+          "min": 0,
+          "max": 100
+        }
+      }
+    }
+  },
+  "polling": {
+    "intervalSeconds": 60,
+    "timeoutSeconds": 2,
+    "jitterSeconds": 5,
+    "retry": {
+      "maxAttempts": 2,
+      "backoffMs": 300
+    }
+  },
+  "metadata": {
+    "notes": "Lofree Flow Lite status query: cmd 0x04, percent at byte 6.",
+    "source": "D:\\LofreeLocker docs/PROTOCOL.md"
+  }
+}

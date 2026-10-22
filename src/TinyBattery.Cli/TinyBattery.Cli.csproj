@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <AssemblyName>TinyBattery.Cli</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TinyBattery.Abstractions\TinyBattery.Abstractions.csproj" />
+    <ProjectReference Include="..\TinyBattery.Core\TinyBattery.Core.csproj" />
+    <ProjectReference Include="..\TinyBattery.Infrastructure\TinyBattery.Infrastructure.csproj" />
+    <ProjectReference Include="..\TinyBattery.Protocols\TinyBattery.Protocols.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "logitech.hidpp2",
+  "displayName": "Logitech HID++ 2.0",
+  "vendor": "Logitech",
+  "enabled": false,
+  "match": {
+    "transport": "hid",
+    "vendorId": 1133,
+    "usagePage": 65280,
+    "interface": "MI_02"
+  },
+  "protocol": {
+    "kind": "logitech.hidpp2",
+    "options": {
+      "deviceIndex": 255,
+      "softwareId": 1,
+      "batteryFeatures": ["0x1004", "0x1000", "0x1001"]
+    }
+  },
+  "polling": {
+    "intervalSeconds": 60,
+    "timeoutSeconds": 2
+  }
+}

@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tinybattery.local/schemas/device-definition.schema.json",
+  "title": "TinyBattery Device Definition",
+  "description": "Declarative description of how to identify a device and read its battery.",
+  "type": "object",
+  "required": ["schemaVersion", "id", "displayName", "match", "protocol"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "displayName": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "vendor": { "type": "string", "maxLength": 200 },
+    "enabled": { "type": "boolean", "default": true },
+    "priority": { "type": "integer", "minimum": -1000, "maximum": 1000, "default": 0 },
+    "match": { "$ref": "#/$defs/match" },
+    "protocol": { "$ref": "#/$defs/protocol" },
+    "polling": { "$ref": "#/$defs/polling" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "maxProperties": 32
+    }
+  },
+  "$defs": {
+    "match": {
+      "type": "object",
+      "required": ["transport"],
+      "additionalProperties": false,
+      "properties": {
+        "transport": { "enum": ["hid", "bleGatt", "pnpProperty"] },
+        "vendorId": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "productId": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "usagePage": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "usage": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "interface": { "type": "string", "maxLength": 64 },
+        "inputReportLength": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "outputReportLength": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "productRegex": { "type": "string", "maxLength": 512 },
+        "manufacturerRegex": { "type": "string", "maxLength": 512 },
+        "serialRegex": { "type": "string", "maxLength": 512 },
+        "serviceUuid": { "type": "string", "maxLength": 64 },
+        "deviceClass": { "type": "string", "maxLength": 128 }
+      },
+      "anyOf": [
+        { "required": ["vendorId"] },
+        { "required": ["usagePage"] },
+        { "required": ["productRegex"] },
+        { "required": ["manufacturerRegex"] },
+        { "required": ["serialRegex"] },
+        { "required": ["serviceUuid"] },
+        { "required": ["deviceClass"] }
+      ]
+    },
+    "protocol": {
+      "type": "object",
+      "required": ["kind", "options"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "options": { "type": "object" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "hid.request-response" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "options": { "$ref": "#/$defs/requestResponseOptions" }
+            }
+          }
+        }
+      ]
+    },
+    "requestResponseOptions": {
+      "type": "object",
+      "required": ["request", "response", "extract"],
+      "additionalProperties": false,
+      "properties": {
+        "reportId": { "type": "integer", "minimum": 0, "maximum": 255, "default": 0 },
+        "includeReportId": { "type": "boolean", "default": true },
+        "timeoutMs": { "type": "integer", "minimum": 100, "maximum": 60000, "default": 2000 },
+        "request": {
+          "type": "object",
+          "required": ["payload"],
+          "additionalProperties": false,
+          "properties": {
+            "payload": {
+              "type": "array",
+              "items": { "type": "integer", "minimum": 0, "maximum": 255 },
+              "minItems": 1,
+              "maxItems": 1024
+            },
+            "checksum": { "$ref": "#/$defs/checksum" }
+          }
+        },
+        "response": {
+          "type": "object",
+          "required": ["match"],
+          "additionalProperties": false,
+          "properties": {
+            "match": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/matchCondition" },
+              "minItems": 1,
+              "maxItems": 16
+            },
+            "minLength": { "type": "integer", "minimum": 1, "maximum": 65535 }
+          }
+        },
+        "extract": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 32,
+          "additionalProperties": { "$ref": "#/$defs/field" }
+        }
+      }
+    },
+    "checksum": {
+      "type": "object",
+      "required": ["kind", "range", "at"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["none", "sum8", "xor8", "crc8", "crc16", "crc32"] },
+        "range": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "target": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "at": { "type": "integer", "minimum": 0 },
+        "polynomial": { "type": "integer", "minimum": 0 },
+        "initial": { "type": "integer", "minimum": 0 },
+        "xorOut": { "type": "integer", "minimum": 0 },
+        "reflectInput": { "type": "boolean" },
+        "reflectOutput": { "type": "boolean" },
+        "littleEndian": { "type": "boolean" }
+      }
+    },
+    "matchCondition": {
+      "type": "object",
+      "required": ["offset"],
+      "additionalProperties": false,
+      "properties": {
+        "offset": { "type": "integer", "minimum": 0 },
+        "equals": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "mask": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "value": { "type": "integer", "minimum": 0, "maximum": 255 }
+      },
+      "oneOf": [
+        { "required": ["equals"] },
+        { "required": ["mask", "value"] }
+      ]
+    },
+    "field": {
+      "type": "object",
+      "required": ["offset", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "offset": { "type": "integer", "minimum": 0 },
+        "type": {
+          "enum": [
+            "u8",
+            "i8",
+            "u16le",
+            "u16be",
+            "i16le",
+            "i16be",
+            "u24le",
+            "u24be",
+            "u32le",
+            "u32be",
+            "i32le",
+            "i32be",
+            "bits"
+          ]
+        },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "mask": { "type": "integer", "minimum": 0 },
+        "shift": { "type": "integer", "minimum": -31, "maximum": 31 },
+        "bitOffset": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "bitCount": { "type": "integer", "minimum": 1, "maximum": 32 },
+        "map": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "maxProperties": 64
+        }
+      },
+      "if": {
+        "properties": { "type": { "const": "bits" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["bitOffset", "bitCount"]
+      }
+    },
+    "polling": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "intervalSeconds": { "type": "integer", "minimum": 5, "maximum": 86400, "default": 60 },
+        "timeoutSeconds": { "type": "integer", "minimum": 1, "maximum": 60, "default": 2 },
+        "jitterSeconds": { "type": "integer", "minimum": 0, "maximum": 300, "default": 5 },
+        "retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxAttempts": { "type": "integer", "minimum": 1, "maximum": 10, "default": 2 },
+            "backoffMs": { "type": "integer", "minimum": 0, "maximum": 60000, "default": 300 }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "$schema": "../../../../schemas/device-definition.schema.json",
+  "schemaVersion": 1,
+  "id": "example.hid-device",
+  "displayName": "Example HID Device",
+  "vendor": "Example",
+  "enabled": false,
+  "match": {
+    "transport": "hid",
+    "vendorId": 65535,
+    "productId": 65535
+  },
+  "protocol": {
+    "kind": "hid.request-response",
+    "options": {
+      "reportId": 1,
+      "includeReportId": true,
+      "timeoutMs": 2000,
+      "request": {
+        "payload": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      },
+      "response": {
+        "match": [
+          { "offset": 0, "equals": 1 }
+        ],
+        "minLength": 2
+      },
+      "extract": {
+        "percent": {
+          "offset": 1,
+          "type": "u8",
+          "min": 0,
+          "max": 100
+        }
+      }
+    }
+  },
+  "polling": {
+    "intervalSeconds": 60
+  }
+}

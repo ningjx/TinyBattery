@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../../schemas/icon-theme.schema.json",
+  "schemaVersion": 1,
+  "id": "classic",
+  "name": "Classic",
+  "version": "1.0.0",
+  "author": "TinyBattery",
+  "description": "The original LofreeLocker battery icon.",
+  "kind": "classic",
+  "classic": {
+    "healthyThreshold": 60,
+    "warningThreshold": 20,
+    "healthyColor": "#45C96B",
+    "warningColor": "#D97706",
+    "criticalColor": "#C42B1C",
+    "unknownColor": "#7A7A7A",
+    "unknownFillRatio": 0.35
+  }
+}

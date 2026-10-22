@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "generic.ble-battery-service",
+  "displayName": "Generic BLE Battery Service",
+  "vendor": "Generic",
+  "enabled": false,
+  "match": {
+    "transport": "bleGatt",
+    "serviceUuid": "0000180f-0000-1000-8000-00805f9b34fb"
+  },
+  "protocol": {
+    "kind": "ble.gatt-read",
+    "options": {
+      "serviceUuid": "0000180f-0000-1000-8000-00805f9b34fb",
+      "characteristicUuid": "00002a19-0000-1000-8000-00805f9b34fb",
+      "extract": {
+        "percent": {
+          "offset": 0,
+          "type": "u8",
+          "min": 0,
+          "max": 100
+        }
+      }
+    }
+  },
+  "polling": {
+    "intervalSeconds": 120,
+    "timeoutSeconds": 5
+  }
+}

@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TinyBattery.Abstractions/TinyBattery.Abstractions.csproj" />
+    <Project Path="src/TinyBattery.App/TinyBattery.App.csproj" />
+    <Project Path="src/TinyBattery.Cli/TinyBattery.Cli.csproj" />
+    <Project Path="src/TinyBattery.Core/TinyBattery.Core.csproj" />
+    <Project Path="src/TinyBattery.Infrastructure/TinyBattery.Infrastructure.csproj" />
+    <Project Path="src/TinyBattery.Plugin.ClassicTheme/TinyBattery.Plugin.ClassicTheme.csproj" />
+    <Project Path="src/TinyBattery.Plugin.Logitech/TinyBattery.Plugin.Logitech.csproj" />
+    <Project Path="src/TinyBattery.Protocols/TinyBattery.Protocols.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TinyBattery.App.Tests/TinyBattery.App.Tests.csproj" />
+    <Project Path="tests/TinyBattery.Core.Tests/TinyBattery.Core.Tests.csproj" />
+    <Project Path="tests/TinyBattery.Infrastructure.Tests/TinyBattery.Infrastructure.Tests.csproj" />
+    <Project Path="tests/TinyBattery.Plugin.Logitech.Tests/TinyBattery.Plugin.Logitech.Tests.csproj" />
+    <Project Path="tests/TinyBattery.Protocols.Tests/TinyBattery.Protocols.Tests.csproj" />
+  </Folder>
+</Solution>

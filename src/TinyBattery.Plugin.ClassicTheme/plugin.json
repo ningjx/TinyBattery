@@ -1,0 +1,9 @@
+{
+  "$schema": "../../schemas/plugin.schema.json",
+  "schemaVersion": 1,
+  "id": "classic-theme",
+  "name": "Classic Theme",
+  "version": "1.0.0",
+  "description": "The original LofreeLocker vector battery icon.",
+  "themes": ["themes"]
+}

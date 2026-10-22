@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="themes\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="CopyPluginToApp" AfterTargets="Build">
+    <PropertyGroup>
+      <PluginAppDir>$(MSBuildProjectDirectory)\..\TinyBattery.App\bin\$(Configuration)\net10.0-windows\plugins\classic-theme</PluginAppDir>
+      <PluginCliDir>$(MSBuildProjectDirectory)\..\TinyBattery.Cli\bin\$(Configuration)\net10.0-windows\plugins\classic-theme</PluginCliDir>
+    </PropertyGroup>
+
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\plugin.json"
+          DestinationFiles="$(PluginAppDir)\plugin.json"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\plugin.json"
+          DestinationFiles="$(PluginCliDir)\plugin.json"
+          SkipUnchangedFiles="true" />
+
+    <ItemGroup>
+      <PluginThemeFiles Include="$(MSBuildProjectDirectory)\themes\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PluginThemeFiles)"
+          DestinationFolder="$(PluginAppDir)\themes\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(PluginThemeFiles)"
+          DestinationFolder="$(PluginCliDir)\themes\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

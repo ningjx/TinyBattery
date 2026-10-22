@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TinyBattery.Abstractions\TinyBattery.Abstractions.csproj" Private="false" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="devices\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="CopyPluginToApp" AfterTargets="Build">
+    <PropertyGroup>
+      <PluginAppDir>$(MSBuildProjectDirectory)\..\TinyBattery.App\bin\$(Configuration)\net10.0-windows\plugins\logitech</PluginAppDir>
+      <PluginCliDir>$(MSBuildProjectDirectory)\..\TinyBattery.Cli\bin\$(Configuration)\net10.0-windows\plugins\logitech</PluginCliDir>
+    </PropertyGroup>
+
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFolder="$(PluginAppDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).deps.json"
+          DestinationFolder="$(PluginAppDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\plugin.json"
+          DestinationFolder="$(PluginAppDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFolder="$(PluginCliDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).deps.json"
+          DestinationFolder="$(PluginCliDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\plugin.json"
+          DestinationFolder="$(PluginCliDir)"
+          SkipUnchangedFiles="true" />
+
+    <ItemGroup>
+      <PluginDeviceFiles Include="$(MSBuildProjectDirectory)\devices\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PluginDeviceFiles)"
+          DestinationFolder="$(PluginAppDir)\devices\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(PluginDeviceFiles)"
+          DestinationFolder="$(PluginCliDir)\devices\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

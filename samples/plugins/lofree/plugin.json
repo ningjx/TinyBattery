@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../schemas/plugin.schema.json",
+  "schemaVersion": 1,
+  "id": "lofree",
+  "name": "Lofree Devices",
+  "version": "1.0.0",
+  "description": "Sample Lofree device definitions. Not shipped by default.",
+  "devices": ["devices"]
+}

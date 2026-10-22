@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../schemas/package.schema.json",
+  "schemaVersion": 1,
+  "id": "example.demo-package",
+  "name": "TinyBattery Demo Package",
+  "version": "1.0.0",
+  "author": "TinyBattery",
+  "description": "Example package with one disabled device definition and one classic theme.",
+  "devices": ["devices/example-device.json"],
+  "themes": ["themes/classic-blue"]
+}

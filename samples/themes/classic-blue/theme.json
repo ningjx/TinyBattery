@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../schemas/icon-theme.schema.json",
+  "schemaVersion": 1,
+  "id": "classic-blue",
+  "name": "Classic Blue",
+  "version": "1.0.0",
+  "author": "TinyBattery",
+  "description": "Classic vector battery icon with a blue healthy color.",
+  "kind": "classic",
+  "classic": {
+    "healthyThreshold": 60,
+    "warningThreshold": 20,
+    "healthyColor": "#2F80ED",
+    "warningColor": "#F2994A",
+    "criticalColor": "#EB5757",
+    "unknownColor": "#828282",
+    "unknownFillRatio": 0.35
+  }
+}

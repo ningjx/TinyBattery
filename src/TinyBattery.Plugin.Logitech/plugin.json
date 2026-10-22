@@ -1,0 +1,12 @@
+{
+  "$schema": "../../schemas/plugin.schema.json",
+  "schemaVersion": 1,
+  "id": "logitech",
+  "name": "Logitech HID++ Devices",
+  "version": "0.1.0",
+  "description": "Read-only HID++ 2.0 battery support. Only feature discovery and battery queries are issued.",
+  "apiVersion": "1.0",
+  "assembly": "TinyBattery.Plugin.Logitech.dll",
+  "entryType": "TinyBattery.Plugin.Logitech.LogitechPlugin",
+  "devices": ["devices"]
+}
