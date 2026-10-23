@@ -18,7 +18,6 @@ namespace TinyBattery.App.Tray;
 public sealed class NotifyIconTrayPresenter : ITrayPresenter
 {
     private readonly IBatteryIconService _icons;
-    private readonly IDeviceDefinitionStore _definitions;
     private readonly IBatteryStateStore _state;
     private readonly IUserSettingsStore _settings;
     private readonly IIconThemeStore _themes;
@@ -30,13 +29,12 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
     private TextBlock? _batteryStatusText;
     private MenuItem? _themeMenu;
     private MenuItem? _displayMenu;
-    private MenuItem? _updatesItem;
+    private MenuItem? _aboutItem;
     private Style? _menuItemStyle;
     private Style? _statusItemStyle;
     private Style? _separatorStyle;
     private SettingsWindow? _settingsWindow;
     private AboutWindow? _aboutWindow;
-    private UpdateWindow? _updateWindow;
     private BatteryIconFrame _lastFrame = BatteryIconFrame.Empty();
     private string _lastToolTip = "TinyBattery · 未选择设备";
     private string? _lastDisplaySignature;
@@ -44,7 +42,6 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
 
     public NotifyIconTrayPresenter(
         IBatteryIconService icons,
-        IDeviceDefinitionStore definitions,
         IBatteryStateStore state,
         IUserSettingsStore settings,
         IIconThemeStore themes,
@@ -53,7 +50,6 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         ILogger<NotifyIconTrayPresenter> logger)
     {
         _icons = icons;
-        _definitions = definitions;
         _state = state;
         _settings = settings;
         _themes = themes;
@@ -82,18 +78,12 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         _themeMenu = NewMenuItem("主题");
         _displayMenu = NewMenuItem("显示设备");
 
-        var reload = NewMenuItem("重新加载设备配置");
-        reload.Click += async (_, _) => await ReloadDefinitionsAsync();
-
         var settings = NewMenuItem("设置");
         settings.Click += (_, _) => ShowSettings();
 
-        var about = NewMenuItem("关于 TinyBattery");
+        var about = NewMenuItem("关于与更新");
         about.Click += (_, _) => ShowAbout();
-
-        var updates = NewMenuItem("检查更新");
-        updates.Click += (_, _) => ShowUpdates();
-        _updatesItem = updates;
+        _aboutItem = about;
 
         var exit = NewMenuItem("退出");
         exit.Click += (_, _) => Application.Current.Shutdown();
@@ -106,9 +96,7 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         menu.Items.Add(_themeMenu);
         menu.Items.Add(_displayMenu);
         menu.Items.Add(NewSeparator());
-        menu.Items.Add(reload);
         menu.Items.Add(settings);
-        menu.Items.Add(updates);
         menu.Items.Add(about);
         menu.Items.Add(NewSeparator());
         menu.Items.Add(exit);
@@ -648,21 +636,15 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
 
     private void ApplyUpdateHeader()
     {
-        if (_updatesItem is null)
+        if (_aboutItem is null)
         {
             return;
         }
 
         var count = _updateState.AvailableCount;
-        _updatesItem.Header = count > 0
-            ? $"有 {count} 个更新…"
-            : "检查更新";
-    }
-
-    private async Task ReloadDefinitionsAsync()
-    {
-        await _definitions.ReloadAsync(CancellationToken.None);
-        RefreshFromState();
+        _aboutItem.Header = count > 0
+            ? $"关于与更新 · {count} 个更新"
+            : "关于与更新";
     }
 
     private void ShowSettings()
@@ -693,20 +675,6 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         _aboutWindow.Activate();
     }
 
-    private void ShowUpdates()
-    {
-        if (_updateWindow is not null)
-        {
-            _updateWindow.Activate();
-            return;
-        }
-
-        _updateWindow = _services.GetRequiredService<UpdateWindow>();
-        _updateWindow.Closed += (_, _) => _updateWindow = null;
-        _updateWindow.Show();
-        _updateWindow.Activate();
-    }
-
     public void Dispose()
     {
         _icons.ThemeChanged -= OnThemeChanged;
@@ -714,7 +682,6 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         _updateState.Changed -= OnUpdateStateChanged;
         _settingsWindow?.Close();
         _aboutWindow?.Close();
-        _updateWindow?.Close();
         _tray?.Dispose();
         _tray = null;
     }

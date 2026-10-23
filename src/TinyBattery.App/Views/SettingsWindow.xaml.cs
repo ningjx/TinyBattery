@@ -42,7 +42,6 @@ public partial class SettingsWindow : Window
     private readonly IServiceProvider _services;
 
     private AboutWindow? _aboutWindow;
-    private UpdateWindow? _updateWindow;
     private bool _updating;
     private bool _subscribed;
 
@@ -597,19 +596,6 @@ public partial class SettingsWindow : Window
     private async void Reload_Click(object sender, RoutedEventArgs e)
     {
         await RefreshAsync();
-    }
-
-    private void CheckUpdates_Click(object sender, RoutedEventArgs e)
-    {
-        if (_updateWindow is null)
-        {
-            _updateWindow = _services.GetRequiredService<UpdateWindow>();
-            _updateWindow.Owner = this;
-            _updateWindow.Closed += (_, _) => _updateWindow = null;
-            _updateWindow.Show();
-        }
-
-        _updateWindow.Activate();
     }
 
     private void About_Click(object sender, RoutedEventArgs e)

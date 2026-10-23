@@ -32,7 +32,6 @@ public static class AppServiceCollectionExtensions
         services.AddHostedService<TrayHostedService>();
         services.AddTransient<SettingsWindow>();
         services.AddTransient<AboutWindow>();
-        services.AddTransient<UpdateWindow>();
 
         return services;
     }

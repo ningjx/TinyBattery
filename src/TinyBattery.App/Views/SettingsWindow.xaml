@@ -71,7 +71,7 @@
                         <Button Margin="0,0,6,0"
                                 VerticalAlignment="Center"
                                 Click="About_Click"
-                                Content="关于"
+                                Content="关于与更新"
                                 Style="{StaticResource GhostButton}" />
                         <Button Margin="0,0,2,0"
                                 Click="Minimize_Click"
@@ -337,10 +337,6 @@
                             <Button Margin="0,0,8,0"
                                     Click="ImportPackage_Click"
                                     Content="导入主题或设备…"
-                                    Style="{StaticResource SoftButton}" />
-                            <Button Margin="0,0,8,0"
-                                    Click="CheckUpdates_Click"
-                                    Content="检查更新"
                                     Style="{StaticResource SoftButton}" />
                             <Button Margin="0,0,8,0"
                                     Click="OpenPluginFolder_Click"
