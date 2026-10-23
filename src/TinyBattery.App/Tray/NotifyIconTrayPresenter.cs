@@ -9,6 +9,7 @@ using TinyBattery.Abstractions.Settings;
 using TinyBattery.Abstractions.State;
 using TinyBattery.Abstractions.Themes;
 using TinyBattery.App.Rendering;
+using TinyBattery.App.Updating;
 using TinyBattery.App.Views;
 
 namespace TinyBattery.App.Tray;
@@ -19,15 +20,19 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
     private readonly IDeviceDefinitionStore _definitions;
     private readonly IBatteryStateStore _state;
     private readonly IUserSettingsStore _settings;
+    private readonly IIconThemeStore _themes;
+    private readonly UpdateState _updateState;
     private readonly IServiceProvider _services;
     private readonly ILogger<NotifyIconTrayPresenter> _logger;
 
     private TaskbarIcon? _tray;
     private MenuItem? _batteryItem;
     private MenuItem? _devicesMenu;
+    private MenuItem? _updatesItem;
     private SettingsWindow? _settingsWindow;
     private AboutWindow? _aboutWindow;
-    private BatteryIconState _lastState = new(null);
+    private UpdateWindow? _updateWindow;
+    private BatteryIconFrame _lastFrame = BatteryIconFrame.Empty();
     private string _lastToolTip = "TinyBattery · 未选择设备";
     private string? _lastDisplaySignature;
     private bool _useDefaultIcon = true;
@@ -37,6 +42,8 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         IDeviceDefinitionStore definitions,
         IBatteryStateStore state,
         IUserSettingsStore settings,
+        IIconThemeStore themes,
+        UpdateState updateState,
         IServiceProvider services,
         ILogger<NotifyIconTrayPresenter> logger)
     {
@@ -44,6 +51,8 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         _definitions = definitions;
         _state = state;
         _settings = settings;
+        _themes = themes;
+        _updateState = updateState;
         _services = services;
         _logger = logger;
     }
@@ -71,6 +80,10 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         var about = new MenuItem { Header = "关于 TinyBattery" };
         about.Click += (_, _) => ShowAbout();
 
+        var updates = new MenuItem { Header = "检查更新" };
+        updates.Click += (_, _) => ShowUpdates();
+        _updatesItem = updates;
+
         var exit = new MenuItem { Header = "退出" };
         exit.Click += (_, _) => Application.Current.Shutdown();
 
@@ -80,6 +93,7 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         menu.Items.Add(new Separator());
         menu.Items.Add(reload);
         menu.Items.Add(settings);
+        menu.Items.Add(updates);
         menu.Items.Add(about);
         menu.Items.Add(new Separator());
         menu.Items.Add(exit);
@@ -105,6 +119,8 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
 
         _icons.ThemeChanged += OnThemeChanged;
         _state.Updated += OnStateUpdated;
+        _updateState.Changed += OnUpdateStateChanged;
+        ApplyUpdateHeader();
         RefreshFromState();
         _logger.LogInformation(
             "Tray icon started with theme '{ThemeId}' (created={Created}).",
@@ -112,9 +128,12 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
             _tray.IsCreated);
     }
 
-    public void SetBattery(BatteryIconState state, string toolTip)
+    public void SetBattery(BatteryIconState state, string toolTip) =>
+        SetFrame(BatteryIconFrame.Single(state), toolTip);
+
+    public void SetFrame(BatteryIconFrame frame, string toolTip)
     {
-        _lastState = state;
+        _lastFrame = frame;
         _lastToolTip = toolTip;
 
         var dispatcher = Application.Current.Dispatcher;
@@ -149,7 +168,7 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
 
         _tray.Icon = _useDefaultIcon
             ? _icons.GetDefaultIcon()
-            : _icons.GetIcon(_lastState);
+            : _icons.GetIcon(_lastFrame);
         _tray.ToolTipText = _lastToolTip;
         if (_batteryItem is not null)
         {
@@ -173,17 +192,43 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
     private void RefreshFromState()
     {
         var snapshots = _state.Snapshot();
+        var theme = _themes.Selected;
         var hasTheme = !string.Equals(
-            _icons.ThemeId,
+            theme.Id,
             IconThemeDescriptor.FallbackId,
             StringComparison.OrdinalIgnoreCase);
-        var primary = TrayDisplaySelector.Select(
+        var displayIds = _settings.Current.DisplayDeviceIds.Count > 0
+            ? _settings.Current.DisplayDeviceIds
+            : string.IsNullOrWhiteSpace(_settings.Current.PrimaryDeviceId)
+                ? []
+                : [_settings.Current.PrimaryDeviceId];
+
+        var resolved = TrayDisplaySelector.Resolve(
             snapshots,
-            _settings.Current.PrimaryDeviceId);
-        var useDefaultIcon = TrayDisplaySelector.ShouldUseDefaultIcon(
-            _icons.ThemeId,
-            primary);
-        var signature = $"{_icons.ThemeId}|{primary?.LogicalDeviceId ?? "-"}|{useDefaultIcon}";
+            displayIds,
+            theme.SlotCount,
+            hasTheme);
+        var frameSlots = new List<BatteryIconSlotState>(theme.Slots.Count);
+        for (var index = 0; index < theme.Slots.Count; index++)
+        {
+            var slot = theme.Slots[index];
+            var snapshot = index < resolved.Slots.Count ? resolved.Slots[index] : null;
+            var battery = snapshot?.Battery;
+            frameSlots.Add(new BatteryIconSlotState(
+                slot.Id,
+                battery?.Percent,
+                battery?.Charging is ChargingState.Charging,
+                snapshot is not null && TrayDisplaySelector.IsReadable(snapshot)));
+        }
+
+        var frame = new BatteryIconFrame(frameSlots);
+        var useDefaultIcon = resolved.UseDefaultIcon;
+        var signature = $"{theme.Id}|{useDefaultIcon}|"
+            + string.Join(
+                ",",
+                frame.Slots.Select(slot =>
+                    $"{slot.SlotId}:{(slot.IsAvailable ? slot.Percent?.ToString() ?? "-" : "x")}:"
+                    + $"{(slot.IsCharging ? 1 : 0)}"));
 
         if (!string.Equals(signature, _lastDisplaySignature, StringComparison.Ordinal))
         {
@@ -199,36 +244,31 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
             else
             {
                 _logger.LogInformation(
-                    "Showing theme '{ThemeId}' for '{Device}'.",
-                    _icons.ThemeId,
-                    primary!.DisplayName);
+                    "Showing theme '{ThemeId}' with {Count} slot(s).",
+                    theme.Id,
+                    frame.Slots.Count);
             }
         }
 
         _useDefaultIcon = useDefaultIcon;
 
-        if (primary is null)
+        if (useDefaultIcon)
         {
-            SetBattery(
-                new BatteryIconState(null),
+            SetFrame(
+                frame,
                 hasTheme
                     ? "TinyBattery · 未选择设备"
                     : "TinyBattery · 未安装主题");
         }
         else
         {
-            var battery = primary.Battery!;
-            var tooltip = BuildToolTip(primary);
+            var tooltip = BuildToolTip(theme, resolved.Slots);
             if (!hasTheme)
             {
                 tooltip += " · 未安装主题";
             }
 
-            SetBattery(
-                new BatteryIconState(
-                    battery.Percent,
-                    battery.Charging is ChargingState.Charging),
-                tooltip);
+            SetFrame(frame, tooltip);
         }
 
         if (_devicesMenu is not null)
@@ -254,6 +294,58 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
                 }
             }
         }
+    }
+
+    private static string BuildToolTip(
+        IconThemeDescriptor theme,
+        IReadOnlyList<DeviceSnapshot?> slots)
+    {
+        var devices = slots
+            .Where(snapshot => snapshot is not null && TrayDisplaySelector.IsReadable(snapshot))
+            .Cast<DeviceSnapshot>()
+            .ToArray();
+        if (devices.Length == 0)
+        {
+            return "TinyBattery · 未选择设备";
+        }
+
+        if (devices.Length == 1)
+        {
+            return BuildToolTip(devices[0]);
+        }
+
+        var parts = new List<string>();
+        var readableCount = 0;
+        for (var slotIndex = 0; slotIndex < slots.Count; slotIndex++)
+        {
+            var snapshot = slots[slotIndex];
+            if (snapshot is null || !TrayDisplaySelector.IsReadable(snapshot))
+            {
+                continue;
+            }
+
+            readableCount++;
+            if (parts.Count >= 3)
+            {
+                continue;
+            }
+
+            var label = slotIndex < theme.Slots.Count
+                && !string.IsNullOrWhiteSpace(theme.Slots[slotIndex].Label)
+                ? theme.Slots[slotIndex].Label!
+                : snapshot.DisplayName;
+            var percent = snapshot.Battery?.Percent is int value
+                ? $" {value}%"
+                : string.Empty;
+            parts.Add($"{label}{percent}");
+        }
+
+        if (readableCount > parts.Count)
+        {
+            parts.Add($"+{readableCount - parts.Count}");
+        }
+
+        return $"TinyBattery · {string.Join(" · ", parts)}";
     }
 
     private static string BuildToolTip(DeviceSnapshot snapshot)
@@ -333,6 +425,32 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         }
     }
 
+    private void OnUpdateStateChanged(object? sender, EventArgs e)
+    {
+        var dispatcher = Application.Current.Dispatcher;
+        if (dispatcher.CheckAccess())
+        {
+            ApplyUpdateHeader();
+        }
+        else
+        {
+            dispatcher.BeginInvoke(ApplyUpdateHeader);
+        }
+    }
+
+    private void ApplyUpdateHeader()
+    {
+        if (_updatesItem is null)
+        {
+            return;
+        }
+
+        var count = _updateState.AvailableCount;
+        _updatesItem.Header = count > 0
+            ? $"有 {count} 个更新…"
+            : "检查更新";
+    }
+
     private async Task ReloadDefinitionsAsync()
     {
         await _definitions.ReloadAsync(CancellationToken.None);
@@ -370,12 +488,28 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         _aboutWindow.Activate();
     }
 
+    private void ShowUpdates()
+    {
+        if (_updateWindow is not null)
+        {
+            _updateWindow.Activate();
+            return;
+        }
+
+        _updateWindow = _services.GetRequiredService<UpdateWindow>();
+        _updateWindow.Closed += (_, _) => _updateWindow = null;
+        _updateWindow.Show();
+        _updateWindow.Activate();
+    }
+
     public void Dispose()
     {
         _icons.ThemeChanged -= OnThemeChanged;
         _state.Updated -= OnStateUpdated;
+        _updateState.Changed -= OnUpdateStateChanged;
         _settingsWindow?.Close();
         _aboutWindow?.Close();
+        _updateWindow?.Close();
         _tray?.Dispose();
         _tray = null;
     }

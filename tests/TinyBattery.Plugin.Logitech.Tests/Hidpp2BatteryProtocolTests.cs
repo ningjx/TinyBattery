@@ -135,7 +135,7 @@ public sealed class Hidpp2BatteryProtocolTests
         var path = Path.Combine(
             AppContext.BaseDirectory,
             "Fixtures",
-            "g913-tkl-receiver.json");
+            "g913-tkl.json");
         var json = File.ReadAllText(path);
         if (timeoutSeconds is not null
             || deviceIndexes is not null

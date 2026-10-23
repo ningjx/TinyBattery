@@ -13,4 +13,10 @@ public interface IAppPaths
     string LogsDirectory { get; }
 
     string SettingsFile { get; }
+
+    string InstalledPackagesFile { get; }
+
+    string UpdateCacheDirectory { get; }
+
+    string BackupsDirectory { get; }
 }

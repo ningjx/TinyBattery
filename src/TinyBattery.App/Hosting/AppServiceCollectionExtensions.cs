@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using TinyBattery.App.Rendering;
 using TinyBattery.App.Tray;
+using TinyBattery.App.Updating;
 using TinyBattery.App.Views;
 using TinyBattery.Core;
 using TinyBattery.Core.Monitoring;
@@ -24,12 +25,14 @@ public static class AppServiceCollectionExtensions
         services.TryAddSingleton<ITrayIconSizeProvider, TrayIconSizeProvider>();
         services.TryAddSingleton<IDefaultTrayIconProvider, DefaultTrayIconProvider>();
         services.TryAddSingleton<ITrayPresenter, NotifyIconTrayPresenter>();
+        services.TryAddSingleton<UpdateState>();
 
         services.AddHostedService<AppStartupService>();
         services.AddHostedService<DeviceMonitorService>();
         services.AddHostedService<TrayHostedService>();
         services.AddTransient<SettingsWindow>();
         services.AddTransient<AboutWindow>();
+        services.AddTransient<UpdateWindow>();
 
         return services;
     }

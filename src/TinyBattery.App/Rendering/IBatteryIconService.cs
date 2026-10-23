@@ -9,9 +9,17 @@ public interface IBatteryIconService : IDisposable
 
     int TrayIconSize { get; }
 
+    int SlotCount { get; }
+
+    IReadOnlyList<IconThemeSlot> Slots { get; }
+
     Drawing.Icon GetIcon(BatteryIconState state);
 
     Drawing.Icon GetIcon(BatteryIconState state, int size);
+
+    Drawing.Icon GetIcon(BatteryIconFrame frame);
+
+    Drawing.Icon GetIcon(BatteryIconFrame frame, int size);
 
     Drawing.Icon GetDefaultIcon();
 

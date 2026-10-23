@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <mask id="cavity">
+      <rect width="32" height="32" fill="#FFFFFF" />
+      <rect x="4.2" y="10.2" width="20.8" height="11.6" rx="2.2" fill="#000000" />
+    </mask>
+    <rect id="tb-fill" x="4.2" y="10.2" width="20.8" height="11.6" rx="2.2" />
+  </defs>
+  <rect x="1.5" y="7.5" width="26.5" height="17" rx="4.5" fill="#2A2A2A" mask="url(#cavity)" />
+  <rect x="4.2" y="10.2" width="20.8" height="11.6" rx="2.2" fill="none"
+        stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="1" />
+  <rect x="28.2" y="12.7" width="2.4" height="6.6" rx="1.2" fill="#2A2A2A" />
+</svg>

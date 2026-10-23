@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schemas/icon-theme.schema.json",
+  "schemaVersion": 1,
+  "id": "neon-svg",
+  "name": "Neon SVG",
+  "version": "1.0.0",
+  "author": "TinyBattery",
+  "description": "Single-slot SVG battery with a rectangular fill.",
+  "kind": "svg",
+  "slotCount": 1,
+  "render": {
+    "svg": "icon.svg",
+    "colors": {
+      "healthy": "#3DDC84",
+      "warning": "#FFB020",
+      "critical": "#FF5A5F",
+      "unknown": "#8C8C8C"
+    },
+    "slots": [
+      {
+        "id": "main",
+        "label": "设备",
+        "mode": "rect",
+        "target": "tb-fill"
+      }
+    ]
+  }
+}

@@ -15,9 +15,15 @@ public sealed record IconThemeDescriptor(
     string? UnknownAssetPath = null,
     string? UnknownSmallAssetPath = null,
     string? ChargingOverlayPath = null,
-    IReadOnlyDictionary<string, string>? Metadata = null)
+    IReadOnlyDictionary<string, string>? Metadata = null,
+    SvgThemeOptions? Svg = null)
 {
     public const string FallbackId = "fallback";
+
+    public int SlotCount => Svg?.Slots.Count ?? 1;
+
+    public IReadOnlyList<IconThemeSlot> Slots => Svg?.Slots
+        ?? [new IconThemeSlot("main", null, IconFillMode.Tint, "")];
 
     public static IconThemeDescriptor CreateFallback() => new(
         FallbackId,

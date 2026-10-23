@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "version": "1.0.0",
   "id": "generic.ble-battery-service",
   "displayName": "Generic BLE Battery Service",
   "vendor": "Generic",

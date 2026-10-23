@@ -13,6 +13,9 @@ internal sealed class TestAppPaths : IAppPaths
         PluginsDirectory = Path.Combine(root, "plugins");
         LogsDirectory = Path.Combine(root, "logs");
         SettingsFile = Path.Combine(root, "settings.json");
+        InstalledPackagesFile = Path.Combine(root, "installed-packages.json");
+        UpdateCacheDirectory = Path.Combine(root, "updates");
+        BackupsDirectory = Path.Combine(root, "backups");
     }
 
     public string RootDirectory { get; }
@@ -26,4 +29,10 @@ internal sealed class TestAppPaths : IAppPaths
     public string LogsDirectory { get; }
 
     public string SettingsFile { get; }
+
+    public string InstalledPackagesFile { get; }
+
+    public string UpdateCacheDirectory { get; }
+
+    public string BackupsDirectory { get; }
 }

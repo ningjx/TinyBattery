@@ -158,12 +158,21 @@ public sealed class JsonDeviceDefinitionStore : IDeviceDefinitionStore
             return;
         }
 
-        if (definition.SchemaVersion != 1)
+        if (definition.SchemaVersion is not (1 or 2))
         {
             diagnostics.Add(new DefinitionDiagnostic(
                 source,
                 definition.Id,
-                [$"Unsupported schemaVersion {definition.SchemaVersion}; expected 1."]));
+                [$"Unsupported schemaVersion {definition.SchemaVersion}; expected 1 or 2."]));
+            return;
+        }
+
+        if (definition.EffectiveMatches.Count == 0)
+        {
+            diagnostics.Add(new DefinitionDiagnostic(
+                source,
+                definition.Id,
+                ["The definition has no match rules."]));
             return;
         }
 

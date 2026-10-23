@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schemas/package.schema.json",
+  "schemaVersion": 1,
+  "id": "example.svg-demo",
+  "name": "SVG Theme Demo",
+  "version": "1.0.0",
+  "minAppVersion": "0.1.0",
+  "author": "TinyBattery",
+  "description": "One device definition and two SVG themes, imported through one package.",
+  "devices": [
+    {
+      "id": "lofree.flow-lite",
+      "version": "1.0.0",
+      "path": "devices/lofree.flow-lite.json"
+    }
+  ],
+  "themes": [
+    {
+      "id": "neon-svg",
+      "version": "1.0.0",
+      "path": "themes/neon"
+    },
+    {
+      "id": "dual-ring",
+      "version": "1.0.0",
+      "path": "themes/dual"
+    }
+  ]
+}

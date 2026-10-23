@@ -9,7 +9,7 @@ namespace TinyBattery.Core.Importing;
 public sealed class IconThemeImporter : IIconThemeImporter
 {
     private static readonly HashSet<string> ThemeExtensions = new(
-        [".json", ".png", ".ico", ".jpg", ".jpeg", ".md", ".txt"],
+        [".json", ".svg", ".png", ".ico", ".jpg", ".jpeg", ".md", ".txt"],
         StringComparer.OrdinalIgnoreCase);
 
     private readonly IAppPaths _paths;
@@ -57,7 +57,14 @@ public sealed class IconThemeImporter : IIconThemeImporter
             if (singleJson && theme.Kind != IconThemeKind.Classic)
             {
                 return ImportResult.Failure(
-                    "Image-set and plugin themes must be imported as a folder or .tbtheme/.zip archive.");
+                    "SVG and image themes must be imported as a folder or .tbpack archive.");
+            }
+
+            if (theme.Kind == IconThemeKind.ImageSet)
+            {
+                return ImportResult.Failure(
+                    "Image-set themes are no longer supported for new imports. "
+                    + "Use an SVG theme instead.");
             }
 
             var destination = Path.Combine(
@@ -173,6 +180,13 @@ public sealed class IconThemeImporter : IIconThemeImporter
             CopyAsset(theme.AppIconPath, sourceDirectory, destination);
             CopyAsset(theme.UnknownAssetPath, sourceDirectory, destination);
             CopyAsset(theme.ChargingOverlayPath, sourceDirectory, destination);
+            CopyAsset(theme.Svg?.SvgPath, sourceDirectory, destination);
+            foreach (var state in theme.Svg?.StateOverrides?.Values ?? [])
+            {
+                CopyAsset(state, sourceDirectory, destination);
+            }
+
+            CopyAsset(theme.Svg?.ChargingOverlayPath, sourceDirectory, destination);
             foreach (var level in theme.Levels ?? [])
             {
                 CopyAsset(level.AssetPath, sourceDirectory, destination);

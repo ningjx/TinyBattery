@@ -4,11 +4,12 @@
   "title": "TinyBattery Device Definition",
   "description": "Declarative description of how to identify a device and read its battery.",
   "type": "object",
-  "required": ["schemaVersion", "id", "displayName", "match", "protocol"],
+  "required": ["schemaVersion", "id", "displayName", "protocol"],
   "additionalProperties": false,
   "properties": {
     "$schema": { "type": "string" },
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "enum": [1, 2] },
+    "version": { "type": "string", "maxLength": 64 },
     "id": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9._-]*$",
@@ -20,6 +21,12 @@
     "enabled": { "type": "boolean", "default": true },
     "priority": { "type": "integer", "minimum": -1000, "maximum": 1000, "default": 0 },
     "match": { "$ref": "#/$defs/match" },
+    "matches": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/match" }
+    },
     "protocol": { "$ref": "#/$defs/protocol" },
     "polling": { "$ref": "#/$defs/polling" },
     "metadata": {
@@ -28,12 +35,17 @@
       "maxProperties": 32
     }
   },
+  "anyOf": [
+    { "required": ["match"] },
+    { "required": ["matches"] }
+  ],
   "$defs": {
     "match": {
       "type": "object",
       "required": ["transport"],
       "additionalProperties": false,
       "properties": {
+        "label": { "type": "string", "maxLength": 64 },
         "transport": { "enum": ["hid", "bleGatt", "pnpProperty"] },
         "vendorId": { "type": "integer", "minimum": 0, "maximum": 65535 },
         "productId": { "type": "integer", "minimum": 0, "maximum": 65535 },

@@ -6,6 +6,19 @@
   "version": "1.0.0",
   "author": "TinyBattery",
   "description": "Example package with one disabled device definition and one classic theme.",
-  "devices": ["devices/example-device.json"],
-  "themes": ["themes/classic-blue"]
+  "minAppVersion": "0.1.0",
+  "devices": [
+    {
+      "id": "example.hid-device",
+      "version": "1.0.0",
+      "path": "devices/example-device.json"
+    }
+  ],
+  "themes": [
+    {
+      "id": "classic-blue",
+      "version": "1.0.0",
+      "path": "themes/classic-blue"
+    }
+  ]
 }

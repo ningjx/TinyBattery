@@ -1,4 +1,5 @@
-using System.Text.Json;
+using System.Xml;
+using System.Xml.Linq;
 using TinyBattery.Abstractions.Assets;
 using TinyBattery.Abstractions.Themes;
 using TinyBattery.Core.Serialization;
@@ -8,6 +9,9 @@ namespace TinyBattery.Core.Themes;
 public sealed class IconThemeLoader
 {
     private static readonly string[] ImageExtensions = [".png", ".ico", ".jpg", ".jpeg"];
+    private static readonly HashSet<string> SvgStateNames = new(
+        ["full", "high", "mid", "low", "unknown", "charging"],
+        StringComparer.OrdinalIgnoreCase);
 
     private readonly IconThemeValidator _validator;
     private readonly IImageAssetValidator _imageValidator;
@@ -49,11 +53,11 @@ public sealed class IconThemeLoader
         IconThemeManifest? manifest;
         try
         {
-            manifest = JsonSerializer.Deserialize<IconThemeManifest>(
+            manifest = System.Text.Json.JsonSerializer.Deserialize<IconThemeManifest>(
                 json,
                 DefinitionJson.Options);
         }
-        catch (JsonException exception)
+        catch (System.Text.Json.JsonException exception)
         {
             errors = [exception.Message];
             return false;
@@ -78,6 +82,7 @@ public sealed class IconThemeLoader
         {
             "classic" => IconThemeKind.Classic,
             "imageSet" => IconThemeKind.ImageSet,
+            "svg" => IconThemeKind.Svg,
             "xaml" => IconThemeKind.Xaml,
             "plugin" => IconThemeKind.Plugin,
             _ => (IconThemeKind?)null,
@@ -97,20 +102,27 @@ public sealed class IconThemeLoader
 
         var preview = ResolveAsset(themeDirectory, manifest.Preview, "preview", errorList);
         var appIcon = ResolveAsset(themeDirectory, manifest.AppIcon, "appIcon", errorList);
-        var unknown = ResolveAsset(themeDirectory, manifest.Unknown, "unknown", errorList);
-        var unknownSmall = ResolveAsset(
-            themeDirectory,
-            manifest.UnknownSmall,
-            "unknownSmall",
-            errorList);
-        var chargingOverlay = ResolveAsset(
-            themeDirectory,
-            manifest.ChargingOverlay,
-            "chargingOverlay",
-            errorList);
+        string? unknown = null;
+        string? unknownSmall = null;
+        string? chargingOverlay = null;
+        if (kind != IconThemeKind.Svg)
+        {
+            unknown = ResolveAsset(themeDirectory, manifest.Unknown, "unknown", errorList);
+            unknownSmall = ResolveAsset(
+                themeDirectory,
+                manifest.UnknownSmall,
+                "unknownSmall",
+                errorList);
+            chargingOverlay = ResolveAsset(
+                themeDirectory,
+                manifest.ChargingOverlay,
+                "chargingOverlay",
+                errorList);
+        }
 
         var levels = new List<IconThemeLevel>();
         ClassicIconThemeOptions? classic = null;
+        SvgThemeOptions? svg = null;
 
         if (kind == IconThemeKind.Classic)
         {
@@ -133,6 +145,10 @@ public sealed class IconThemeLoader
             {
                 errorList.Add("unknownFillRatio must be between 0 and 1.");
             }
+        }
+        else if (kind == IconThemeKind.Svg)
+        {
+            svg = LoadSvgTheme(themeDirectory, manifest, errorList);
         }
         else
         {
@@ -188,10 +204,288 @@ public sealed class IconThemeLoader
             unknown,
             unknownSmall,
             chargingOverlay,
-            manifest.Metadata);
+            manifest.Metadata,
+            svg);
 
         errors = [];
         return true;
+    }
+
+    private SvgThemeOptions? LoadSvgTheme(
+        string themeDirectory,
+        IconThemeManifest manifest,
+        List<string> errors)
+    {
+        var render = manifest.Render;
+        if (render is null)
+        {
+            errors.Add("SVG themes require a render object.");
+            return null;
+        }
+
+        if (render.Slots is null || render.Slots.Count == 0)
+        {
+            errors.Add("SVG themes require at least one slot.");
+            return null;
+        }
+
+        var declaredCount = manifest.SlotCount ?? render.Slots.Count;
+        if (declaredCount != render.Slots.Count)
+        {
+            errors.Add(
+                $"slotCount is {declaredCount} but {render.Slots.Count} slots are defined.");
+        }
+
+        if (declaredCount < 1 || declaredCount > 8)
+        {
+            errors.Add("slotCount must be between 1 and 8.");
+        }
+
+        var slots = new List<IconThemeSlot>();
+        var slotIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var slot in render.Slots)
+        {
+            if (!slotIds.Add(slot.Id))
+            {
+                errors.Add($"Duplicate slot id '{slot.Id}'.");
+                continue;
+            }
+
+            if (!Enum.TryParse<IconFillMode>(slot.Mode, ignoreCase: true, out var mode))
+            {
+                errors.Add($"Unknown fill mode '{slot.Mode}' for slot '{slot.Id}'.");
+                continue;
+            }
+
+            if (mode == IconFillMode.Tint && declaredCount != 1)
+            {
+                errors.Add("tint mode is only supported for single-slot themes.");
+            }
+
+            slots.Add(new IconThemeSlot(slot.Id, slot.Label, mode, slot.Target));
+        }
+
+        var svgPath = ResolveSvg(themeDirectory, render.Svg, "render.svg", errors);
+        XDocument? svgDocument = null;
+        if (svgPath is not null)
+        {
+            svgDocument = LoadSvgDocument(svgPath, "render.svg", errors);
+            if (svgDocument is not null)
+            {
+                ValidateSvgTargets(svgDocument, slots, render.Svg, errors);
+            }
+        }
+
+        var states = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (state, relativePath) in render.States ?? new Dictionary<string, string>())
+        {
+            if (!SvgStateNames.Contains(state))
+            {
+                errors.Add($"Unknown SVG state '{state}'.");
+                continue;
+            }
+
+            var path = ResolveSvg(themeDirectory, relativePath, $"state {state}", errors);
+            if (path is not null)
+            {
+                LoadSvgDocument(path, $"state {state}", errors);
+                if (!string.Equals(state, "charging", StringComparison.OrdinalIgnoreCase))
+                {
+                    states[state] = path;
+                }
+            }
+        }
+
+        string? charging = null;
+        var configuredCharging = render.States?
+            .FirstOrDefault(pair => string.Equals(
+                pair.Key,
+                "charging",
+                StringComparison.OrdinalIgnoreCase))
+            .Value;
+        var chargingPath = !string.IsNullOrWhiteSpace(configuredCharging)
+            ? configuredCharging
+            : manifest.ChargingOverlay;
+        if (!string.IsNullOrWhiteSpace(chargingPath))
+        {
+            var path = ResolveSvg(themeDirectory, chargingPath, "charging overlay", errors);
+            if (path is not null)
+            {
+                LoadSvgDocument(path, "charging overlay", errors);
+                charging = path;
+            }
+        }
+
+        if (svgPath is null || errorListHasErrors(errors))
+        {
+            return null;
+        }
+
+        var colors = render.Colors is null
+            ? new ThemeColorSet()
+            : new ThemeColorSet(
+                render.Colors.Healthy,
+                render.Colors.Warning,
+                render.Colors.Critical,
+                render.Colors.Unknown,
+                render.Colors.Track);
+
+        return new SvgThemeOptions(
+            svgPath,
+            slots,
+            colors,
+            charging,
+            states,
+            render.StartAngle ?? -90,
+            render.Clockwise ?? true,
+            render.InnerRadius ?? 0);
+    }
+
+    private static bool errorListHasErrors(List<string> errors) => errors.Count > 0;
+
+    private static void ValidateSvgTargets(
+        XDocument document,
+        IReadOnlyList<IconThemeSlot> slots,
+        string svgLabel,
+        List<string> errors)
+    {
+        foreach (var slot in slots)
+        {
+            if (slot.Mode == IconFillMode.Tint)
+            {
+                continue;
+            }
+
+            var element = document
+                .Descendants()
+                .FirstOrDefault(candidate => string.Equals(
+                    (string?)candidate.Attribute("id"),
+                    slot.Target,
+                    StringComparison.OrdinalIgnoreCase));
+            if (element is null)
+            {
+                errors.Add($"Slot '{slot.Id}' target '{slot.Target}' was not found in {svgLabel}.");
+                continue;
+            }
+
+            var name = element.Name.LocalName;
+            var expected = slot.Mode is IconFillMode.Ring or IconFillMode.Sector
+                ? "circle"
+                : "rect";
+            if (!string.Equals(name, expected, StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add(
+                    $"Slot '{slot.Id}' target '{slot.Target}' must be a <{expected}> for "
+                    + $"{slot.Mode} mode.");
+            }
+
+            if (!string.IsNullOrWhiteSpace((string?)element.Attribute("transform")))
+            {
+                errors.Add(
+                    $"Slot '{slot.Id}' target '{slot.Target}' must not use a transform.");
+            }
+        }
+    }
+
+    private string? ResolveSvg(
+        string themeDirectory,
+        string? relativePath,
+        string label,
+        List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            errors.Add($"{label} path is empty.");
+            return null;
+        }
+
+        var fullPath = Path.GetFullPath(Path.Combine(themeDirectory, relativePath));
+        if (!IsUnder(themeDirectory, fullPath))
+        {
+            errors.Add($"{label} escapes the theme directory: {relativePath}");
+            return null;
+        }
+
+        if (!File.Exists(fullPath))
+        {
+            errors.Add($"{label} was not found: {relativePath}");
+            return null;
+        }
+
+        if (!string.Equals(
+                Path.GetExtension(fullPath),
+                ".svg",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            errors.Add($"{label} must be an .svg file: {relativePath}");
+            return null;
+        }
+
+        if (new FileInfo(fullPath).Length > 256 * 1024)
+        {
+            errors.Add($"{label} exceeds 256 KB: {relativePath}");
+            return null;
+        }
+
+        return fullPath;
+    }
+
+    private static XDocument? LoadSvgDocument(
+        string path,
+        string label,
+        List<string> errors)
+    {
+        try
+        {
+            using var stream = File.OpenRead(path);
+            using var reader = XmlReader.Create(
+                stream,
+                new XmlReaderSettings
+                {
+                    DtdProcessing = DtdProcessing.Prohibit,
+                    XmlResolver = null,
+                });
+            var document = XDocument.Load(reader);
+            var root = document.Root;
+            if (root is null
+                || !string.Equals(root.Name.LocalName, "svg", StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add($"{label} is not an SVG document.");
+                return null;
+            }
+
+            if (root.Attribute("viewBox") is null
+                && (root.Attribute("width") is null || root.Attribute("height") is null))
+            {
+                errors.Add($"{label} must define a viewBox or width/height.");
+            }
+
+            foreach (var element in document.Descendants())
+            {
+                var name = element.Name.LocalName;
+                if (name is "script" or "foreignObject" or "image")
+                {
+                    errors.Add($"{label} contains a disallowed <{name}> element.");
+                }
+
+                foreach (var attribute in element.Attributes())
+                {
+                    if (attribute.Name.LocalName is "href"
+                        && !attribute.Value.StartsWith('#'))
+                    {
+                        errors.Add($"{label} contains an external reference.");
+                    }
+                }
+            }
+
+            return document;
+        }
+        catch (Exception exception) when (
+            exception is XmlException or IOException or UnauthorizedAccessException)
+        {
+            errors.Add($"{label} could not be parsed: {exception.Message}");
+            return null;
+        }
     }
 
     private string? ResolveAsset(

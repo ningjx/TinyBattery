@@ -17,6 +17,8 @@ public sealed class BatteryIconService : IBatteryIconService
     private BatteryIconCache? _cache;
     private readonly BatteryIconCache _fallbackCache;
     private string _themeId = "classic";
+    private IReadOnlyList<IconThemeSlot> _slots =
+        [new IconThemeSlot("main", null, IconFillMode.Tint, "")];
 
     public BatteryIconService(
         IIconThemeStore themes,
@@ -38,6 +40,28 @@ public sealed class BatteryIconService : IBatteryIconService
 
     public int TrayIconSize => _sizeProvider.GetSize();
 
+    public int SlotCount
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _slots.Count;
+            }
+        }
+    }
+
+    public IReadOnlyList<IconThemeSlot> Slots
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _slots;
+            }
+        }
+    }
+
     public string ThemeId
     {
         get
@@ -54,14 +78,20 @@ public sealed class BatteryIconService : IBatteryIconService
     public Drawing.Icon GetIcon(BatteryIconState state) =>
         GetIcon(state, TrayIconSize);
 
-    public Drawing.Icon GetIcon(BatteryIconState state, int size)
+    public Drawing.Icon GetIcon(BatteryIconState state, int size) =>
+        GetIcon(BatteryIconFrame.Single(state), size);
+
+    public Drawing.Icon GetIcon(BatteryIconFrame frame) =>
+        GetIcon(frame, TrayIconSize);
+
+    public Drawing.Icon GetIcon(BatteryIconFrame frame, int size)
     {
         lock (_gate)
         {
             try
             {
                 return (_cache ?? throw new InvalidOperationException(
-                    "The battery icon service has not been initialized.")).Get(state, size);
+                    "The battery icon service has not been initialized.")).Get(frame, size);
             }
             catch (Exception exception)
             {
@@ -69,7 +99,7 @@ public sealed class BatteryIconService : IBatteryIconService
                     exception,
                     "Icon rendering failed for theme '{ThemeId}'; using the classic fallback.",
                     _themeId);
-                return _fallbackCache.Get(state, size);
+                return _fallbackCache.Get(frame, size);
             }
         }
     }
@@ -129,6 +159,9 @@ public sealed class BatteryIconService : IBatteryIconService
 
             _cache = new BatteryIconCache(renderer);
             _themeId = themeId;
+            _slots = string.Equals(themeId, "classic", StringComparison.OrdinalIgnoreCase)
+                ? [new IconThemeSlot("main", null, IconFillMode.Tint, "")]
+                : theme.Slots;
         }
 
         ThemeChanged?.Invoke(this, EventArgs.Empty);

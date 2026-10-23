@@ -142,8 +142,145 @@ public sealed class PackageImporterTests
         }
     }
 
+    [Fact]
+    public async Task PackageWithVersionedSvgTheme_Imports()
+    {
+        var root = CreateRoot();
+        try
+        {
+            var package = Path.Combine(root, "package");
+            Directory.CreateDirectory(Path.Combine(package, "themes", "neon"));
+            await File.WriteAllTextAsync(
+                Path.Combine(package, "themes", "neon", "icon.svg"),
+                """
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                  <defs>
+                    <rect id="tb-fill" x="4" y="4" width="24" height="24" />
+                  </defs>
+                </svg>
+                """);
+            await File.WriteAllTextAsync(
+                Path.Combine(package, "themes", "neon", "theme.json"),
+                """
+                {
+                  "schemaVersion": 1,
+                  "id": "neon",
+                  "name": "Neon",
+                  "version": "1.0.0",
+                  "kind": "svg",
+                  "slotCount": 1,
+                  "render": {
+                    "svg": "icon.svg",
+                    "slots": [
+                      { "id": "main", "mode": "rect", "target": "tb-fill" }
+                    ]
+                  }
+                }
+                """);
+            await File.WriteAllTextAsync(
+                Path.Combine(package, "package.json"),
+                """
+                {
+                  "schemaVersion": 1,
+                  "id": "example.svg-pack",
+                  "name": "SVG Pack",
+                  "version": "1.0.0",
+                  "minAppVersion": "0.1.0",
+                  "themes": [
+                    { "id": "neon", "version": "1.0.0", "path": "themes/neon" }
+                  ]
+                }
+                """);
+
+            var paths = new TestAppPaths(Path.Combine(root, "data"));
+            var importer = CreateImporter(paths);
+
+            var result = await importer.ImportAsync(
+                package,
+                new ImportOptions(),
+                CancellationToken.None);
+
+            Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
+            Assert.True(File.Exists(Path.Combine(paths.ThemesDirectory, "neon", "icon.svg")));
+        }
+        finally
+        {
+            DeleteRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task PackageVersionMismatch_IsRejected()
+    {
+        var root = CreateRoot();
+        try
+        {
+            var package = Path.Combine(root, "package");
+            Directory.CreateDirectory(Path.Combine(package, "themes", "neon"));
+            await File.WriteAllTextAsync(
+                Path.Combine(package, "themes", "neon", "icon.svg"),
+                """
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                  <defs>
+                    <rect id="tb-fill" x="4" y="4" width="24" height="24" />
+                  </defs>
+                </svg>
+                """);
+            await File.WriteAllTextAsync(
+                Path.Combine(package, "themes", "neon", "theme.json"),
+                """
+                {
+                  "schemaVersion": 1,
+                  "id": "neon",
+                  "name": "Neon",
+                  "version": "1.0.0",
+                  "kind": "svg",
+                  "slotCount": 1,
+                  "render": {
+                    "svg": "icon.svg",
+                    "slots": [
+                      { "id": "main", "mode": "rect", "target": "tb-fill" }
+                    ]
+                  }
+                }
+                """);
+            await File.WriteAllTextAsync(
+                Path.Combine(package, "package.json"),
+                """
+                {
+                  "schemaVersion": 1,
+                  "id": "example.svg-pack",
+                  "name": "SVG Pack",
+                  "version": "1.0.0",
+                  "themes": [
+                    { "id": "neon", "version": "2.0.0", "path": "themes/neon" }
+                  ]
+                }
+                """);
+
+            var paths = new TestAppPaths(Path.Combine(root, "data"));
+            var importer = CreateImporter(paths);
+
+            var result = await importer.ImportAsync(
+                package,
+                new ImportOptions(),
+                CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Contains("does not match", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteRoot(root);
+        }
+    }
+
     private static PackageImporter CreateImporter(TestAppPaths paths)
     {
+        var themeLoader = new IconThemeLoader(
+            new IconThemeValidator(),
+            new FakeImageAssetValidator());
         var devices = new DeviceDefinitionImporter(
             paths,
             new FakeProtocolRegistry("hid.request-response"),
@@ -151,9 +288,7 @@ public sealed class PackageImporterTests
             NullLogger<DeviceDefinitionImporter>.Instance);
         var themes = new IconThemeImporter(
             paths,
-            new IconThemeLoader(
-                new IconThemeValidator(),
-                new FakeImageAssetValidator()),
+            themeLoader,
             new SafeZipExtractor(),
             NullLogger<IconThemeImporter>.Instance);
 
@@ -162,6 +297,11 @@ public sealed class PackageImporterTests
             themes,
             new PackageValidator(),
             new SafeZipExtractor(),
+            new DefinitionValidator(),
+            new FakeProtocolRegistry("hid.request-response"),
+            themeLoader,
+            new FakeInstalledPackageStore(),
+            paths,
             NullLogger<PackageImporter>.Instance);
     }
 

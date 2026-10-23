@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "version": "1.0.0",
   "id": "generic.hid-battery-strength",
   "displayName": "Generic HID Battery Strength",
   "vendor": "Generic",

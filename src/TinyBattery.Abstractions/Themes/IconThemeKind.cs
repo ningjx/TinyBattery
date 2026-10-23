@@ -4,6 +4,7 @@ public enum IconThemeKind
 {
     Classic,
     ImageSet,
+    Svg,
     Xaml,
     Plugin,
 }

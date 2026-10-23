@@ -46,6 +46,12 @@ public sealed class JsonUserSettingsStore : IUserSettingsStore
             var json = await File.ReadAllTextAsync(_paths.SettingsFile, ct);
             _current = JsonSerializer.Deserialize<UserSettings>(json, JsonOptions)
                 ?? new UserSettings();
+
+            if (_current.DisplayDeviceIds.Count == 0
+                && !string.IsNullOrWhiteSpace(_current.PrimaryDeviceId))
+            {
+                _current.DisplayDeviceIds.Add(_current.PrimaryDeviceId);
+            }
         }
         catch (Exception exception) when (exception is IOException or JsonException)
         {
@@ -72,6 +78,15 @@ public sealed class JsonUserSettingsStore : IUserSettingsStore
                 Directory.CreateDirectory(directory);
             }
 
+            if (settings.DisplayDeviceIds.Count == 0
+                && !string.IsNullOrWhiteSpace(settings.PrimaryDeviceId))
+            {
+                settings.DisplayDeviceIds.Add(settings.PrimaryDeviceId);
+            }
+
+            settings.PrimaryDeviceId = settings.DisplayDeviceIds
+                .FirstOrDefault(id => !string.IsNullOrWhiteSpace(id))
+                ?? settings.PrimaryDeviceId;
             var json = JsonSerializer.Serialize(settings, JsonOptions);
             var temporaryPath = _paths.SettingsFile + ".tmp";
             await File.WriteAllTextAsync(temporaryPath, json, ct);

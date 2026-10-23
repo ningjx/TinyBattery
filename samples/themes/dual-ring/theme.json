@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../schemas/icon-theme.schema.json",
+  "schemaVersion": 1,
+  "id": "dual-ring",
+  "name": "Dual Ring",
+  "version": "1.0.0",
+  "author": "TinyBattery",
+  "description": "Two independent ring gauges for two devices.",
+  "kind": "svg",
+  "slotCount": 2,
+  "render": {
+    "svg": "icon.svg",
+    "colors": {
+      "healthy": "#3DDC84",
+      "warning": "#FFB020",
+      "critical": "#FF5A5F",
+      "unknown": "#8C8C8C"
+    },
+    "startAngle": -90,
+    "clockwise": true,
+    "slots": [
+      {
+        "id": "left",
+        "label": "左耳",
+        "mode": "ring",
+        "target": "tb-ring-left"
+      },
+      {
+        "id": "right",
+        "label": "右耳",
+        "mode": "ring",
+        "target": "tb-ring-right"
+      }
+    ]
+  }
+}

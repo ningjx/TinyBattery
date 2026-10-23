@@ -20,8 +20,8 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
-    <None Include="..\..\src\TinyBattery.Plugin.Logitech\devices\g913-tkl-receiver.json"
-          Link="Fixtures\g913-tkl-receiver.json"
+    <None Include="..\..\src\TinyBattery.Plugin.Logitech\devices\g913-tkl.json"
+          Link="Fixtures\g913-tkl.json"
           CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

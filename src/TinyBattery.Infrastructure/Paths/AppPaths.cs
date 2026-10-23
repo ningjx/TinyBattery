@@ -22,6 +22,9 @@ public sealed class AppPaths : IAppPaths
         PluginsDirectory = Path.Combine(RootDirectory, "plugins");
         LogsDirectory = Path.Combine(RootDirectory, "logs");
         SettingsFile = Path.Combine(RootDirectory, "settings.json");
+        InstalledPackagesFile = Path.Combine(RootDirectory, "installed-packages.json");
+        UpdateCacheDirectory = Path.Combine(RootDirectory, "updates");
+        BackupsDirectory = Path.Combine(RootDirectory, "backups");
     }
 
     public string RootDirectory { get; }
@@ -36,6 +39,12 @@ public sealed class AppPaths : IAppPaths
 
     public string SettingsFile { get; }
 
+    public string InstalledPackagesFile { get; }
+
+    public string UpdateCacheDirectory { get; }
+
+    public string BackupsDirectory { get; }
+
     public void EnsureCreated()
     {
         Directory.CreateDirectory(RootDirectory);
@@ -43,5 +52,7 @@ public sealed class AppPaths : IAppPaths
         Directory.CreateDirectory(ThemesDirectory);
         Directory.CreateDirectory(PluginsDirectory);
         Directory.CreateDirectory(LogsDirectory);
+        Directory.CreateDirectory(UpdateCacheDirectory);
+        Directory.CreateDirectory(BackupsDirectory);
     }
 }

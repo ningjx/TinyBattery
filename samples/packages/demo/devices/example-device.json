@@ -1,6 +1,7 @@
 {
   "$schema": "../../../../schemas/device-definition.schema.json",
   "schemaVersion": 1,
+  "version": "1.0.0",
   "id": "example.hid-device",
   "displayName": "Example HID Device",
   "vendor": "Example",

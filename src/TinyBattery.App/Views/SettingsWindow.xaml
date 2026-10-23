@@ -220,84 +220,57 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <Grid Grid.Row="0">
-                                <TextBlock Style="{StaticResource SectionTitle}" Text="设备" />
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="显示设备" />
                                 <TextBlock x:Name="DeviceCountText"
                                            HorizontalAlignment="Right"
                                            VerticalAlignment="Center"
                                            Style="{StaticResource MetaText}" />
                             </Grid>
                             <TextBlock Grid.Row="1"
-                                       Margin="0,3,0,8"
+                                       x:Name="DeviceHintText"
+                                       Margin="0,3,0,10"
                                        Style="{StaticResource Caption}"
-                                       Text="选择托盘图标显示哪个设备的电量" />
+                                       Text="选择托盘图标显示的设备" />
 
-                            <ListBox x:Name="DeviceList"
-                                     Grid.Row="2"
-                                     MinHeight="110"
-                                     SelectionChanged="DeviceList_SelectionChanged"
-                                     Style="{StaticResource PlainList}">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel VerticalAlignment="Center">
-                                                <TextBlock FontSize="13"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{StaticResource TextPrimaryBrush}"
-                                                           Text="{Binding Title}"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Margin="0,2,0,0"
-                                                           Style="{StaticResource Caption}"
-                                                           Text="{Binding Detail}"
-                                                           TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
-                                            <TextBlock Grid.Column="1"
-                                                       Margin="12,0,0,0"
-                                                       VerticalAlignment="Center"
-                                                       FontSize="15"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{Binding Accent}"
-                                                       Text="{Binding Percent}" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
+                            <ScrollViewer Grid.Row="2"
+                                          MaxHeight="190"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Auto">
+                                <StackPanel x:Name="SlotPanel" />
+                            </ScrollViewer>
 
                             <Border Grid.Row="3"
                                     Height="1"
-                                    Margin="0,10"
+                                    Margin="0,12"
                                     Background="{StaticResource DividerBrush}" />
 
                             <Grid Grid.Row="4">
                                 <TextBlock FontSize="12.5"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource TextPrimaryBrush}"
-                                           Text="已安装的设备定义" />
-                                <TextBlock x:Name="DefinitionCountText"
+                                           Text="已连接设备" />
+                                <TextBlock x:Name="LiveCountText"
                                            HorizontalAlignment="Right"
                                            VerticalAlignment="Center"
                                            Style="{StaticResource MetaText}" />
                             </Grid>
 
                             <ScrollViewer Grid.Row="5"
-                                          Height="144"
                                           Margin="0,6,0,0"
                                           HorizontalScrollBarVisibility="Disabled"
                                           VerticalScrollBarVisibility="Auto">
-                                <ItemsControl x:Name="DefinitionsList">
+                                <ItemsControl x:Name="DeviceList">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Margin="10,5">
+                                            <Grid Margin="10,6">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
@@ -306,28 +279,31 @@
                                                     <TextBlock FontSize="12.5"
                                                                FontWeight="SemiBold"
                                                                Foreground="{StaticResource TextPrimaryBrush}"
-                                                               Text="{Binding Name}"
+                                                               Text="{Binding Title}"
                                                                TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Margin="0,1,0,0"
-                                                               Style="{StaticResource MetaText}"
+                                                    <TextBlock Margin="0,2,0,0"
+                                                               Style="{StaticResource Caption}"
                                                                Text="{Binding Detail}"
                                                                TextTrimming="CharacterEllipsis" />
                                                 </StackPanel>
-                                                <Border Grid.Column="1"
-                                                        Margin="10,0,0,0"
-                                                        Padding="6,2"
-                                                        VerticalAlignment="Center"
-                                                        Background="{StaticResource SubtleBrush}"
-                                                        CornerRadius="5">
-                                                    <TextBlock FontSize="10.5"
-                                                               Foreground="{StaticResource TextSecondaryBrush}"
-                                                               Text="{Binding Kind}" />
-                                                </Border>
+                                                <TextBlock Grid.Column="1"
+                                                           Margin="12,0,0,0"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="15"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{Binding Accent}"
+                                                           Text="{Binding Percent}" />
                                             </Grid>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </ScrollViewer>
+
+                            <TextBlock x:Name="DefinitionCountText"
+                                       Grid.Row="6"
+                                       Margin="0,8,0,0"
+                                       Style="{StaticResource MetaText}"
+                                       TextTrimming="CharacterEllipsis" />
                         </Grid>
                     </Border>
                 </Grid>
@@ -359,20 +335,12 @@
                                     Margin="0,10,0,0"
                                     Orientation="Horizontal">
                             <Button Margin="0,0,8,0"
-                                    Click="ImportDevice_Click"
-                                    Content="导入设备"
-                                    Style="{StaticResource SoftButton}" />
-                            <Button Margin="0,0,8,0"
-                                    Click="ImportThemeFolder_Click"
-                                    Content="导入主题文件夹"
-                                    Style="{StaticResource SoftButton}" />
-                            <Button Margin="0,0,8,0"
-                                    Click="ImportThemeArchive_Click"
-                                    Content="导入主题包"
-                                    Style="{StaticResource SoftButton}" />
-                            <Button Margin="0,0,8,0"
                                     Click="ImportPackage_Click"
-                                    Content="导入扩展包"
+                                    Content="导入主题或设备…"
+                                    Style="{StaticResource SoftButton}" />
+                            <Button Margin="0,0,8,0"
+                                    Click="CheckUpdates_Click"
+                                    Content="检查更新"
                                     Style="{StaticResource SoftButton}" />
                             <Button Margin="0,0,8,0"
                                     Click="OpenPluginFolder_Click"

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using TinyBattery.Core.Importing;
 
 namespace TinyBattery.Core.Serialization;
 
@@ -11,6 +12,10 @@ public static class DefinitionJson
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+        Converters =
+        {
+            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
+            new PackageItemManifestConverter(),
+        },
     };
 }

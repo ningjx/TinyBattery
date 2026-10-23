@@ -21,6 +21,9 @@
       <PluginCliDir>$(MSBuildProjectDirectory)\..\TinyBattery.Cli\bin\$(Configuration)\net10.0-windows\plugins\logitech</PluginCliDir>
     </PropertyGroup>
 
+    <RemoveDir Directories="$(PluginAppDir)\devices" />
+    <RemoveDir Directories="$(PluginCliDir)\devices" />
+
     <Copy SourceFiles="$(TargetPath)"
           DestinationFolder="$(PluginAppDir)"
           SkipUnchangedFiles="true" />

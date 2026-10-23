@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://tinybattery.local/schemas/icon-theme.schema.json",
   "title": "TinyBattery Icon Theme",
-  "description": "A battery icon theme. Classic themes recolor the built-in vector icon; imageSet themes provide images per battery level.",
+  "description": "A battery icon theme. SVG themes draw a base SVG and fill one or more declared slots. Classic and imageSet remain for legacy themes.",
   "type": "object",
   "required": ["schemaVersion", "id", "name", "kind"],
   "additionalProperties": false,
@@ -19,10 +19,64 @@
     "version": { "type": "string", "maxLength": 64 },
     "author": { "type": "string", "maxLength": 200 },
     "description": { "type": "string", "maxLength": 2000 },
-    "kind": { "enum": ["classic", "imageSet", "xaml", "plugin"] },
+    "kind": { "enum": ["classic", "svg", "imageSet", "xaml", "plugin"] },
+    "slotCount": { "type": "integer", "minimum": 1, "maximum": 8 },
     "size": { "type": "integer", "minimum": 16, "maximum": 256, "default": 32 },
     "preview": { "type": "string", "maxLength": 512 },
     "appIcon": { "type": "string", "maxLength": 512 },
+    "render": {
+      "type": "object",
+      "required": ["svg", "slots"],
+      "additionalProperties": false,
+      "properties": {
+        "svg": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "slots": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "required": ["id", "target"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]*$",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "label": { "type": "string", "maxLength": 64 },
+              "mode": { "enum": ["rect", "ring", "sector", "tint"], "default": "rect" },
+              "target": {
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9._-]*$",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            }
+          }
+        },
+        "colors": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "healthy": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$" },
+            "warning": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$" },
+            "critical": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$" },
+            "unknown": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$" },
+            "track": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$" }
+          }
+        },
+        "startAngle": { "type": "number", "minimum": -360, "maximum": 360 },
+        "clockwise": { "type": "boolean", "default": true },
+        "innerRadius": { "type": "number", "minimum": 0, "maximum": 1024 },
+        "states": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "maxProperties": 8
+        }
+      }
+    },
     "classic": {
       "type": "object",
       "additionalProperties": false,
@@ -61,6 +115,13 @@
     }
   },
   "allOf": [
+    {
+      "if": {
+        "properties": { "kind": { "const": "svg" } },
+        "required": ["kind"]
+      },
+      "then": { "required": ["render"] }
+    },
     {
       "if": {
         "properties": { "kind": { "const": "imageSet" } },

@@ -13,4 +13,5 @@ public sealed record DeviceMatch(
     string? ManufacturerRegex = null,
     string? SerialRegex = null,
     string? ServiceUuid = null,
-    string? DeviceClass = null);
+    string? DeviceClass = null,
+    string? Label = null);

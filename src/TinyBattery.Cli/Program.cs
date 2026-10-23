@@ -11,6 +11,7 @@ using TinyBattery.Core.Themes;
 using TinyBattery.Core.Validation;
 using TinyBattery.Infrastructure.Assets;
 using TinyBattery.Infrastructure.Hid;
+using TinyBattery.Infrastructure.Packages;
 using TinyBattery.Infrastructure.Paths;
 using TinyBattery.Infrastructure.Plugins;
 using TinyBattery.Infrastructure.Settings;
@@ -262,6 +263,9 @@ static async Task<int> ImportPackageAsync(string[] args) =>
         "import-package <package.json|文件夹|.tbpack|.zip> [--overwrite]",
         (paths, registry) =>
         {
+            var themeLoader = new IconThemeLoader(
+                new IconThemeValidator(),
+                new SystemDrawingImageAssetValidator());
             var deviceImporter = new DeviceDefinitionImporter(
                 paths,
                 registry,
@@ -269,9 +273,7 @@ static async Task<int> ImportPackageAsync(string[] args) =>
                 NullLogger<DeviceDefinitionImporter>.Instance);
             var themeImporter = new IconThemeImporter(
                 paths,
-                new IconThemeLoader(
-                    new IconThemeValidator(),
-                    new SystemDrawingImageAssetValidator()),
+                themeLoader,
                 new SafeZipExtractor(),
                 NullLogger<IconThemeImporter>.Instance);
             return new PackageImporter(
@@ -279,6 +281,13 @@ static async Task<int> ImportPackageAsync(string[] args) =>
                 themeImporter,
                 new PackageValidator(),
                 new SafeZipExtractor(),
+                new DefinitionValidator(),
+                registry,
+                themeLoader,
+                new JsonInstalledPackageStore(
+                    paths,
+                    NullLogger<JsonInstalledPackageStore>.Instance),
+                paths,
                 NullLogger<PackageImporter>.Instance);
         });
 

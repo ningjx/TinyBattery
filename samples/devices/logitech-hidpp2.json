@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "version": "1.0.0",
   "id": "logitech.hidpp2",
   "displayName": "Logitech HID++ 2.0",
   "vendor": "Logitech",

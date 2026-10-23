@@ -18,6 +18,7 @@ public sealed class BatteryIconRendererFactory : IBatteryIconRendererFactory
             theme.Classic ?? new ClassicIconThemeOptions(),
             theme.Id),
         IconThemeKind.ImageSet => new ImageSetBatteryIconRenderer(theme),
+        IconThemeKind.Svg => new SvgBatteryIconRenderer(theme),
         IconThemeKind.Plugin => new PluginBatteryIconRenderer(
             theme,
             FindPlugin(theme.Id)),

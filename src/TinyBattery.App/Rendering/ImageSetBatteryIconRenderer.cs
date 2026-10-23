@@ -52,6 +52,12 @@ public sealed class ImageSetBatteryIconRenderer : IBatteryIconRenderer
 
     public string ThemeId { get; }
 
+    public Drawing.Icon Render(BatteryIconFrame frame, int size) =>
+        Render(FirstState(frame), size);
+
+    public Drawing.Bitmap RenderBitmap(BatteryIconFrame frame, int size) =>
+        RenderBitmap(FirstState(frame), size);
+
     public Drawing.Icon Render(BatteryIconState state, int size)
     {
         using var bitmap = RenderBitmap(state, size);
@@ -92,6 +98,12 @@ public sealed class ImageSetBatteryIconRenderer : IBatteryIconRenderer
         }
 
         _sources.Clear();
+    }
+
+    private static BatteryIconState FirstState(BatteryIconFrame frame)
+    {
+        var slot = frame.Slots.FirstOrDefault();
+        return new BatteryIconState(slot.Percent, slot.IsCharging);
     }
 
     private string SelectAsset(int? percent, int size)

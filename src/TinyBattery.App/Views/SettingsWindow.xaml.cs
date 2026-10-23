@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -37,12 +38,11 @@ public partial class SettingsWindow : Window
     private readonly IBatteryStateStore _state;
     private readonly IUserSettingsStore _settings;
     private readonly ITrayPresenter _tray;
-    private readonly IDeviceDefinitionImporter _deviceImporter;
-    private readonly IIconThemeImporter _themeImporter;
     private readonly IPackageImporter _packageImporter;
     private readonly IServiceProvider _services;
 
     private AboutWindow? _aboutWindow;
+    private UpdateWindow? _updateWindow;
     private bool _updating;
     private bool _subscribed;
 
@@ -56,8 +56,6 @@ public partial class SettingsWindow : Window
         IBatteryStateStore state,
         IUserSettingsStore settings,
         ITrayPresenter tray,
-        IDeviceDefinitionImporter deviceImporter,
-        IIconThemeImporter themeImporter,
         IPackageImporter packageImporter,
         IServiceProvider services)
     {
@@ -70,8 +68,6 @@ public partial class SettingsWindow : Window
         _state = state;
         _settings = settings;
         _tray = tray;
-        _deviceImporter = deviceImporter;
-        _themeImporter = themeImporter;
         _packageImporter = packageImporter;
         _services = services;
         InitializeComponent();
@@ -107,8 +103,9 @@ public partial class SettingsWindow : Window
             await _definitions.ReloadAsync(CancellationToken.None);
             await _themes.ReloadAsync(CancellationToken.None);
             BuildThemes();
-            BuildDevices();
-            BuildDefinitions();
+            BuildLiveDevices();
+            BuildSlots();
+            BuildDefinitionSummary();
             UpdateDiagnostics();
         }
         catch (Exception exception)
@@ -150,7 +147,7 @@ public partial class SettingsWindow : Window
         var name = isFallback ? "程序默认图标" : theme.DisplayName;
         var subtitle = isFallback
             ? "未安装可用主题时自动使用"
-            : $"{KindLabel(theme.Kind)}"
+            : $"{KindLabel(theme.Kind)} · {theme.SlotCount} 个槽位"
                 + (string.IsNullOrWhiteSpace(theme.Author)
                     ? string.Empty
                     : $" · {theme.Author}");
@@ -187,6 +184,7 @@ public partial class SettingsWindow : Window
         }
 
         meta.Add(isFallback ? "程序内置" : KindLabel(theme.Kind));
+        meta.Add($"{theme.SlotCount} 个槽位");
         ThemeMetaText.Text = string.Join(" · ", meta);
 
         var appIcon = LoadImage(theme.AppIconPath);
@@ -216,7 +214,7 @@ public partial class SettingsWindow : Window
         try
         {
             using var renderer = _renderers.Create(theme);
-            using var icon = renderer.Render(new BatteryIconState(80), size);
+            using var icon = renderer.Render(SampleFrame(theme), size);
             return FromIcon(icon);
         }
         catch (Exception)
@@ -225,38 +223,173 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void BuildDevices()
+    private static BatteryIconFrame SampleFrame(IconThemeDescriptor theme)
+    {
+        var slots = theme.Slots
+            .Select((slot, index) => new BatteryIconSlotState(
+                slot.Id,
+                Math.Max(20, 92 - index * 23),
+                IsCharging: false,
+                IsAvailable: true))
+            .ToArray();
+        return slots.Length == 0
+            ? BatteryIconFrame.Single(new BatteryIconState(80))
+            : new BatteryIconFrame(slots);
+    }
+
+    private void BuildLiveDevices()
     {
         var snapshots = _state.Snapshot()
             .OrderBy(snapshot => snapshot.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+        DeviceList.ItemsSource = snapshots.Select(CreateDeviceRow).ToArray();
+        LiveCountText.Text = snapshots.Length == 0
+            ? "未检测到设备"
+            : $"{snapshots.Length} 个设备";
+    }
 
-        var rows = new List<DeviceRow>
+    private void BuildSlots()
+    {
+        var wasUpdating = _updating;
+        _updating = true;
+        try
         {
-            new(
-                null,
-                "自动选择",
-                "跟随当前电量最低的设备",
-                string.Empty,
-                Brushes.Transparent),
-        };
-        rows.AddRange(snapshots.Select(CreateDeviceRow));
-        DeviceList.ItemsSource = rows;
+            var theme = _themes.Selected;
+            var snapshots = _state.Snapshot()
+                .OrderBy(snapshot => snapshot.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var options = new List<DeviceOption>
+            {
+                new(null, "自动选择"),
+            };
+            options.AddRange(snapshots.Select(snapshot => new DeviceOption(
+                snapshot.LogicalDeviceId,
+                BuildOptionLabel(snapshot))));
 
-        var primaryId = _settings.Current.PrimaryDeviceId;
-        var selected = string.IsNullOrWhiteSpace(primaryId)
-            ? rows[0]
-            : rows.FirstOrDefault(row => string.Equals(
-                row.DeviceId,
-                primaryId,
-                StringComparison.OrdinalIgnoreCase));
-        DeviceList.SelectedItem = selected;
-        DeviceCountText.Text = snapshots.Length switch
+            var ids = _settings.Current.DisplayDeviceIds;
+            SlotPanel.Children.Clear();
+            for (var index = 0; index < theme.Slots.Count; index++)
+            {
+                var slot = theme.Slots[index];
+                var assigned = index < ids.Count
+                    ? ids[index]
+                    : null;
+                if (!string.IsNullOrWhiteSpace(assigned)
+                    && options.All(option => !string.Equals(
+                        option.Id,
+                        assigned,
+                        StringComparison.OrdinalIgnoreCase)))
+                {
+                    options.Add(new DeviceOption(assigned, $"{assigned}（未连接）"));
+                }
+
+                var row = new Grid { Margin = new Thickness(0, 0, 0, 7) };
+                row.ColumnDefinitions.Add(new ColumnDefinition
+                {
+                    Width = new GridLength(104),
+                });
+                row.ColumnDefinitions.Add(new ColumnDefinition
+                {
+                    Width = new GridLength(1, GridUnitType.Star),
+                });
+
+                var label = new TextBlock
+                {
+                    Text = string.IsNullOrWhiteSpace(slot.Label)
+                        ? $"设备 {index + 1}"
+                        : slot.Label,
+                    FontSize = 12.5,
+                    Foreground = (Brush)FindResource("TextSecondaryBrush"),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                };
+                Grid.SetColumn(label, 0);
+                row.Children.Add(label);
+
+                var combo = new ComboBox
+                {
+                    Style = (Style)FindResource("SoftComboBox"),
+                    ItemsSource = options,
+                    DisplayMemberPath = nameof(DeviceOption.DisplayName),
+                    SelectedValuePath = nameof(DeviceOption.Id),
+                    Height = 31,
+                    Margin = new Thickness(6, 0, 0, 0),
+                };
+                AutomationProperties.SetName(
+                    combo,
+                    label.Text);
+                Grid.SetColumn(combo, 1);
+                if (string.IsNullOrWhiteSpace(assigned))
+                {
+                    combo.SelectedIndex = 0;
+                }
+                else
+                {
+                    combo.SelectedValue = assigned;
+                }
+
+                var slotIndex = index;
+                combo.SelectionChanged += async (_, _) =>
+                    await SaveSlotAsync(slotIndex, combo.SelectedValue as string);
+                row.Children.Add(combo);
+                SlotPanel.Children.Add(row);
+            }
+
+            DeviceCountText.Text = $"{theme.SlotCount} 个槽位";
+            DeviceHintText.Text = theme.SlotCount <= 1
+                ? "选择托盘图标显示的设备；自动选择会跟随最低电量设备"
+                : $"此主题固定显示 {theme.SlotCount} 个设备，未分配的槽位显示为未知";
+        }
+        finally
         {
-            0 => "未检测到设备",
-            _ when selected is null => "已选设备未连接",
-            _ => $"{snapshots.Length} 个设备",
+            _updating = wasUpdating;
+        }
+    }
+
+    private async Task SaveSlotAsync(int index, string? deviceId)
+    {
+        if (_updating)
+        {
+            return;
+        }
+
+        try
+        {
+            var ids = _settings.Current.DisplayDeviceIds;
+            while (ids.Count <= index)
+            {
+                ids.Add(string.Empty);
+            }
+
+            ids[index] = deviceId ?? string.Empty;
+            _settings.Current.PrimaryDeviceId = ids.FirstOrDefault(
+                id => !string.IsNullOrWhiteSpace(id));
+            await _settings.SaveAsync(_settings.Current, CancellationToken.None);
+            _tray.Refresh();
+        }
+        catch (Exception exception)
+        {
+            ShowStatus([exception.Message], success: false);
+        }
+    }
+
+    private static string BuildOptionLabel(DeviceSnapshot snapshot)
+    {
+        var percent = snapshot.Battery?.Percent is int value
+            ? $" · {value}%"
+            : snapshot.Battery?.VoltageMv is double voltage
+                ? $" · {voltage / 1000:0.00} V"
+                : string.Empty;
+        var state = snapshot.State switch
+        {
+            DeviceConnectionState.Connected => string.Empty,
+            DeviceConnectionState.Asleep => " · 休眠",
+            DeviceConnectionState.AccessDenied => " · 被占用",
+            DeviceConnectionState.Unreachable => " · 未连接",
+            DeviceConnectionState.Faulted => " · 读取失败",
+            _ => string.Empty,
         };
+        return $"{snapshot.DisplayName}{percent}{state}";
     }
 
     private static DeviceRow CreateDeviceRow(DeviceSnapshot snapshot)
@@ -297,15 +430,10 @@ public partial class SettingsWindow : Window
             accent);
     }
 
-    private void BuildDefinitions()
+    private void BuildDefinitionSummary()
     {
-        DefinitionsList.ItemsSource = _definitions.Definitions
-            .Select(definition => new DefinitionRow(
-                definition.DisplayName,
-                $"{definition.Id} · {definition.Protocol.Kind}",
-                definition.Enabled ? "启用" : "停用"))
-            .ToArray();
-        DefinitionCountText.Text = $"{_definitions.Definitions.Count} 个";
+        DefinitionCountText.Text =
+            $"已安装 {_definitions.Definitions.Count} 个设备定义（后台匹配用，不单独展示）";
     }
 
     private async void ThemeList_SelectionChanged(
@@ -321,35 +449,9 @@ public partial class SettingsWindow : Window
         {
             await _themes.SelectAsync(row.Descriptor.Id, CancellationToken.None);
             ApplyThemeDetail(row.Descriptor);
-            UpdateDiagnostics();
-        }
-        catch (Exception exception)
-        {
-            ShowStatus([exception.Message], success: false);
-        }
-    }
-
-    private async void DeviceList_SelectionChanged(
-        object sender,
-        SelectionChangedEventArgs e)
-    {
-        if (_updating || DeviceList.SelectedItem is not DeviceRow row)
-        {
-            return;
-        }
-
-        var current = _settings.Current.PrimaryDeviceId;
-        if (string.Equals(current, row.DeviceId, StringComparison.OrdinalIgnoreCase)
-            || (string.IsNullOrEmpty(current) && row.DeviceId is null))
-        {
-            return;
-        }
-
-        try
-        {
-            _settings.Current.PrimaryDeviceId = row.DeviceId;
-            await _settings.SaveAsync(_settings.Current, CancellationToken.None);
+            BuildSlots();
             _tray.Refresh();
+            UpdateDiagnostics();
         }
         catch (Exception exception)
         {
@@ -376,7 +478,8 @@ public partial class SettingsWindow : Window
         _updating = true;
         try
         {
-            BuildDevices();
+            BuildLiveDevices();
+            BuildSlots();
         }
         finally
         {
@@ -401,68 +504,13 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private async void ImportDevice_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFileDialog
-        {
-            Title = "导入设备定义",
-            Filter = "设备定义 (*.json)|*.json|所有文件 (*.*)|*.*",
-        };
-        if (dialog.ShowDialog(this) != true)
-        {
-            return;
-        }
-
-        var result = await _deviceImporter.ImportAsync(
-            dialog.FileName,
-            new ImportOptions(OverwriteCheckBox.IsChecked == true),
-            CancellationToken.None);
-        await ShowImportResultAsync(result);
-    }
-
-    private async void ImportThemeFolder_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFolderDialog
-        {
-            Title = "导入图标主题文件夹",
-        };
-        if (dialog.ShowDialog(this) != true)
-        {
-            return;
-        }
-
-        var result = await _themeImporter.ImportAsync(
-            dialog.FolderName,
-            new ImportOptions(OverwriteCheckBox.IsChecked == true),
-            CancellationToken.None);
-        await ShowImportResultAsync(result);
-    }
-
-    private async void ImportThemeArchive_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFileDialog
-        {
-            Title = "导入图标主题包",
-            Filter = "图标主题 (*.tbtheme;*.zip)|*.tbtheme;*.zip|所有文件 (*.*)|*.*",
-        };
-        if (dialog.ShowDialog(this) != true)
-        {
-            return;
-        }
-
-        var result = await _themeImporter.ImportAsync(
-            dialog.FileName,
-            new ImportOptions(OverwriteCheckBox.IsChecked == true),
-            CancellationToken.None);
-        await ShowImportResultAsync(result);
-    }
-
     private async void ImportPackage_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
         {
-            Title = "导入扩展包",
-            Filter = "扩展包 (*.tbpack;*.zip)|*.tbpack;*.zip|所有文件 (*.*)|*.*",
+            Title = "导入主题或设备",
+            Filter = "TinyBattery 包 (*.tbpack;*.zip;*.tbtheme)|*.tbpack;*.zip;*.tbtheme|"
+                + "JSON (*.json)|*.json|所有文件 (*.*)|*.*",
         };
         if (dialog.ShowDialog(this) != true)
         {
@@ -471,7 +519,9 @@ public partial class SettingsWindow : Window
 
         var result = await _packageImporter.ImportAsync(
             dialog.FileName,
-            new ImportOptions(OverwriteCheckBox.IsChecked == true),
+            new ImportOptions(
+                OverwriteCheckBox.IsChecked == true,
+                Source: dialog.FileName),
             CancellationToken.None);
         await ShowImportResultAsync(result);
     }
@@ -528,6 +578,19 @@ public partial class SettingsWindow : Window
         await RefreshAsync();
     }
 
+    private void CheckUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updateWindow is null)
+        {
+            _updateWindow = _services.GetRequiredService<UpdateWindow>();
+            _updateWindow.Owner = this;
+            _updateWindow.Closed += (_, _) => _updateWindow = null;
+            _updateWindow.Show();
+        }
+
+        _updateWindow.Activate();
+    }
+
     private void About_Click(object sender, RoutedEventArgs e)
     {
         if (_aboutWindow is null)
@@ -581,6 +644,7 @@ public partial class SettingsWindow : Window
     {
         IconThemeKind.Classic => "经典矢量",
         IconThemeKind.ImageSet => "图片集",
+        IconThemeKind.Svg => "SVG",
         IconThemeKind.Plugin => "插件主题",
         _ => "未知类型",
     };
@@ -629,7 +693,10 @@ public partial class SettingsWindow : Window
         IconThemeDescriptor Descriptor,
         string Name,
         string Subtitle,
-        ImageSource? Preview);
+        ImageSource? Preview)
+    {
+        public override string ToString() => Name;
+    }
 
     private sealed record DeviceRow(
         string? DeviceId,
@@ -638,8 +705,5 @@ public partial class SettingsWindow : Window
         string Percent,
         Brush Accent);
 
-    private sealed record DefinitionRow(
-        string Name,
-        string Detail,
-        string Kind);
+    private sealed record DeviceOption(string? Id, string DisplayName);
 }

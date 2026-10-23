@@ -1,0 +1,54 @@
+{
+  "$schema": "../../../schemas/device-definition.schema.json",
+  "schemaVersion": 2,
+  "version": "1.1.0",
+  "id": "logitech.g913-tkl",
+  "displayName": "Logitech G913 TKL",
+  "vendor": "Logitech",
+  "enabled": true,
+  "matches": [
+    {
+      "label": "Receiver",
+      "transport": "hid",
+      "vendorId": 1133,
+      "productId": 50501,
+      "usagePage": 65280,
+      "usage": 2,
+      "interface": "MI_02"
+    },
+    {
+      "label": "Shared Receiver",
+      "transport": "hid",
+      "vendorId": 1133,
+      "productId": 50503,
+      "usagePage": 65280,
+      "usage": 2,
+      "interface": "MI_02"
+    },
+    {
+      "label": "USB",
+      "transport": "hid",
+      "vendorId": 1133,
+      "productId": 49987,
+      "usagePage": 65280,
+      "usage": 2,
+      "interface": "MI_02"
+    }
+  ],
+  "protocol": {
+    "kind": "logitech.hidpp2",
+    "options": {
+      "softwareId": 10,
+      "deviceIndexes": [1, 255, 2, 3, 4, 5, 6],
+      "batteryFeatures": ["0x1001", "0x1000", "0x1004"]
+    }
+  },
+  "polling": {
+    "intervalSeconds": 60,
+    "timeoutSeconds": 2,
+    "retry": {
+      "maxAttempts": 2,
+      "backoffMs": 300
+    }
+  }
+}

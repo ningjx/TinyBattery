@@ -26,18 +26,21 @@ public sealed class DeviceMatcher : IDeviceMatcher
 
         foreach (var definition in _store.Definitions)
         {
-            var result = TryMatch(candidate, definition);
-            if (result is null)
+            foreach (var match in definition.EffectiveMatches)
             {
-                continue;
-            }
+                var result = TryMatch(candidate, definition, match);
+                if (result is null)
+                {
+                    continue;
+                }
 
-            if (best is null
-                || result.Score > best.Score
-                || (result.Score == best.Score
-                    && result.Definition.Priority > best.Definition.Priority))
-            {
-                best = result;
+                if (best is null
+                    || result.Score > best.Score
+                    || (result.Score == best.Score
+                        && result.Definition.Priority > best.Definition.Priority))
+                {
+                    best = result;
+                }
             }
         }
 
@@ -56,9 +59,9 @@ public sealed class DeviceMatcher : IDeviceMatcher
 
     private static MatchResult? TryMatch(
         DeviceCandidate candidate,
-        DeviceDefinition definition)
+        DeviceDefinition definition,
+        DeviceMatch match)
     {
-        var match = definition.Match;
         if (candidate.Transport != match.Transport)
         {
             return null;
