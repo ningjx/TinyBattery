@@ -543,7 +543,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
-                    <Border Background="Transparent" Padding="8,6">
+                    <Border Background="Transparent" Padding="26,6,8,6">
                         <ContentPresenter ContentSource="Header"
                                           VerticalAlignment="Center" />
                     </Border>
