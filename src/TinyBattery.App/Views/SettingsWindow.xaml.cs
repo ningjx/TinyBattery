@@ -15,6 +15,7 @@ using TinyBattery.Abstractions.Paths;
 using TinyBattery.Abstractions.Plugins;
 using TinyBattery.Abstractions.Registry;
 using TinyBattery.Abstractions.Settings;
+using TinyBattery.Abstractions.Startup;
 using TinyBattery.Abstractions.State;
 using TinyBattery.Abstractions.Themes;
 using TinyBattery.App.Rendering;
@@ -37,6 +38,7 @@ public partial class SettingsWindow : Window
     private readonly IBatteryIconRendererFactory _renderers;
     private readonly IBatteryStateStore _state;
     private readonly IUserSettingsStore _settings;
+    private readonly IAutoStartService _autoStart;
     private readonly ITrayPresenter _tray;
     private readonly IPackageImporter _packageImporter;
     private readonly IServiceProvider _services;
@@ -54,6 +56,7 @@ public partial class SettingsWindow : Window
         IBatteryIconRendererFactory renderers,
         IBatteryStateStore state,
         IUserSettingsStore settings,
+        IAutoStartService autoStart,
         ITrayPresenter tray,
         IPackageImporter packageImporter,
         IServiceProvider services)
@@ -66,6 +69,7 @@ public partial class SettingsWindow : Window
         _renderers = renderers;
         _state = state;
         _settings = settings;
+        _autoStart = autoStart;
         _tray = tray;
         _packageImporter = packageImporter;
         _services = services;
@@ -105,6 +109,7 @@ public partial class SettingsWindow : Window
             BuildLiveDevices();
             BuildSlots();
             BuildDefinitionSummary();
+            AutoStartCheckBox.IsChecked = _autoStart.IsEnabled;
             UpdateDiagnostics();
         }
         catch (Exception exception)
@@ -596,6 +601,30 @@ public partial class SettingsWindow : Window
     private async void Reload_Click(object sender, RoutedEventArgs e)
     {
         await RefreshAsync();
+    }
+
+    private async void AutoStart_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updating)
+        {
+            return;
+        }
+
+        var enabled = AutoStartCheckBox.IsChecked == true;
+        try
+        {
+            _autoStart.SetEnabled(enabled);
+            _settings.Current.StartWithWindows = enabled;
+            await _settings.SaveAsync(_settings.Current, CancellationToken.None);
+            ShowStatus(
+                [enabled ? "已启用开机自启。" : "已关闭开机自启。"],
+                success: true);
+        }
+        catch (Exception exception)
+        {
+            AutoStartCheckBox.IsChecked = _autoStart.IsEnabled;
+            ShowStatus([exception.Message], success: false);
+        }
     }
 
     private void About_Click(object sender, RoutedEventArgs e)

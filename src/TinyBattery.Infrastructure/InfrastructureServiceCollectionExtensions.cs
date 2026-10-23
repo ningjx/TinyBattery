@@ -6,6 +6,7 @@ using TinyBattery.Abstractions.Packages;
 using TinyBattery.Abstractions.Paths;
 using TinyBattery.Abstractions.Plugins;
 using TinyBattery.Abstractions.Settings;
+using TinyBattery.Abstractions.Startup;
 using TinyBattery.Abstractions.Transports;
 using TinyBattery.Abstractions.Updating;
 using TinyBattery.Infrastructure.Assets;
@@ -14,6 +15,7 @@ using TinyBattery.Infrastructure.Packages;
 using TinyBattery.Infrastructure.Paths;
 using TinyBattery.Infrastructure.Plugins;
 using TinyBattery.Infrastructure.Settings;
+using TinyBattery.Infrastructure.Startup;
 using TinyBattery.Infrastructure.Updating;
 
 namespace TinyBattery.Infrastructure;
@@ -25,6 +27,7 @@ public static class InfrastructureServiceCollectionExtensions
     {
         services.TryAddSingleton<IAppPaths, AppPaths>();
         services.TryAddSingleton<IUserSettingsStore, JsonUserSettingsStore>();
+        services.TryAddSingleton<IAutoStartService, RegistryAutoStartService>();
         services.TryAddSingleton<IInstalledPackageStore, JsonInstalledPackageStore>();
         services.TryAddSingleton<IImageAssetValidator, SystemDrawingImageAssetValidator>();
         services.TryAddSingleton<IUpdateService, UpdateService>();
@@ -37,7 +40,11 @@ public static class InfrastructureServiceCollectionExtensions
         services.TryAddSingleton<PluginAssetCatalog>();
         services.TryAddSingleton<IPluginAssetCatalog>(
             provider => provider.GetRequiredService<PluginAssetCatalog>());
-        services.TryAddSingleton<IPluginLoader, PluginLoader>();
+        services.TryAddSingleton<PluginLoader>();
+        services.TryAddSingleton<IPluginLoader>(
+            provider => provider.GetRequiredService<PluginLoader>());
+        services.TryAddSingleton<IBuiltInPluginRegistrar>(
+            provider => provider.GetRequiredService<PluginLoader>());
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IDeviceTransport, HidSharpTransport>());

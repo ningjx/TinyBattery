@@ -14,6 +14,12 @@ public interface IPluginAssetCatalog
     IReadOnlyList<IBatteryIconThemePlugin> ThemePlugins { get; }
 
     IReadOnlyList<PluginDiagnostic> Diagnostics { get; }
+
+    void AddDeviceDefinitionPath(string path);
+
+    void AddThemeManifestPath(string path);
+
+    void AddDiagnostic(string source, string message);
 }
 
 public sealed record PluginDiagnostic(

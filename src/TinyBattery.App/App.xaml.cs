@@ -20,7 +20,13 @@ public partial class App : Application
             return;
         }
 
-        var builder = Host.CreateApplicationBuilder(e.Args);
+        var hostArgs = e.Args
+            .Where(arg => !string.Equals(
+                arg,
+                "--background",
+                StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var builder = Host.CreateApplicationBuilder(hostArgs);
         builder.Services.AddTinyBatteryApp();
         _host = builder.Build();
         await _host.StartAsync();

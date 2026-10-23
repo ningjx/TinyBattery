@@ -19,6 +19,7 @@
     <ProjectReference Include="..\TinyBattery.Core\TinyBattery.Core.csproj" />
     <ProjectReference Include="..\TinyBattery.Infrastructure\TinyBattery.Infrastructure.csproj" />
     <ProjectReference Include="..\TinyBattery.Protocols\TinyBattery.Protocols.csproj" />
+    <ProjectReference Include="..\TinyBattery.Plugin.Logitech\TinyBattery.Plugin.Logitech.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,5 +29,21 @@
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" />
     <PackageReference Include="Svg.Skia" />
   </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\TinyBattery.Plugin.Logitech\devices\g913-tkl.json"
+                      LogicalName="TinyBattery.Bundled.logitech.devices.g913-tkl.json" />
+    <EmbeddedResource Include="..\TinyBattery.Plugin.ClassicTheme\themes\classic\theme.json"
+                      LogicalName="TinyBattery.Bundled.classic.theme.json" />
+    <EmbeddedResource Include="..\TinyBattery.Plugin.ClassicTheme\themes\classic\icon.svg"
+                      LogicalName="TinyBattery.Bundled.classic.icon.svg" />
+  </ItemGroup>
+
+  <Target Name="ExcludePdbFromPublish" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                            Condition="'%(ResolvedFileToPublish.Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
 
 </Project>

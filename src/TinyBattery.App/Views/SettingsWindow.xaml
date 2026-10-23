@@ -325,10 +325,18 @@
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource TextPrimaryBrush}"
                                        Text="导入与维护" />
-                            <CheckBox x:Name="OverwriteCheckBox"
-                                      HorizontalAlignment="Right"
-                                      Content="覆盖已有内容"
-                                      Style="{StaticResource SoftCheckBox}" />
+                            <StackPanel HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        Orientation="Horizontal">
+                                <CheckBox x:Name="AutoStartCheckBox"
+                                          Click="AutoStart_Click"
+                                          Content="开机自启"
+                                          Style="{StaticResource SoftCheckBox}" />
+                                <CheckBox x:Name="OverwriteCheckBox"
+                                          Margin="14,0,0,0"
+                                          Content="覆盖已有内容"
+                                          Style="{StaticResource SoftCheckBox}" />
+                            </StackPanel>
                         </Grid>
 
                         <StackPanel Grid.Row="1"

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using TinyBattery.App.Plugins;
 using TinyBattery.App.Rendering;
 using TinyBattery.App.Tray;
 using TinyBattery.App.Updating;
@@ -26,6 +27,7 @@ public static class AppServiceCollectionExtensions
         services.TryAddSingleton<IDefaultTrayIconProvider, DefaultTrayIconProvider>();
         services.TryAddSingleton<ITrayPresenter, NotifyIconTrayPresenter>();
         services.TryAddSingleton<UpdateState>();
+        services.TryAddSingleton<BundledPluginInstaller>();
 
         services.AddHostedService<AppStartupService>();
         services.AddHostedService<DeviceMonitorService>();

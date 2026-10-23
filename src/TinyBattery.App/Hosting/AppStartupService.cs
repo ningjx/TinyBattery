@@ -4,8 +4,10 @@ using TinyBattery.Abstractions.Paths;
 using TinyBattery.Abstractions.Plugins;
 using TinyBattery.Abstractions.Registry;
 using TinyBattery.Abstractions.Settings;
+using TinyBattery.Abstractions.Startup;
 using TinyBattery.Abstractions.Themes;
 using TinyBattery.Abstractions.Updating;
+using TinyBattery.App.Plugins;
 using TinyBattery.App.Updating;
 using TinyBattery.Infrastructure.Paths;
 
@@ -15,7 +17,9 @@ public sealed class AppStartupService : IHostedService
 {
     private readonly IAppPaths _paths;
     private readonly IPluginLoader _plugins;
+    private readonly BundledPluginInstaller _bundledPlugins;
     private readonly IUserSettingsStore _settings;
+    private readonly IAutoStartService _autoStart;
     private readonly IDeviceDefinitionStore _definitions;
     private readonly IIconThemeStore _themes;
     private readonly IUpdateService _updates;
@@ -25,7 +29,9 @@ public sealed class AppStartupService : IHostedService
     public AppStartupService(
         IAppPaths paths,
         IPluginLoader plugins,
+        BundledPluginInstaller bundledPlugins,
         IUserSettingsStore settings,
+        IAutoStartService autoStart,
         IDeviceDefinitionStore definitions,
         IIconThemeStore themes,
         IUpdateService updates,
@@ -34,7 +40,9 @@ public sealed class AppStartupService : IHostedService
     {
         _paths = paths;
         _plugins = plugins;
+        _bundledPlugins = bundledPlugins;
         _settings = settings;
+        _autoStart = autoStart;
         _definitions = definitions;
         _themes = themes;
         _updates = updates;
@@ -49,8 +57,18 @@ public sealed class AppStartupService : IHostedService
             appPaths.EnsureCreated();
         }
 
+        try
+        {
+            _bundledPlugins.Install();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Could not install bundled plugins.");
+        }
+
         await _plugins.LoadAsync(cancellationToken);
         await _settings.LoadAsync(cancellationToken);
+        TryEnsureAutoStart();
         await _definitions.ReloadAsync(cancellationToken);
         await _themes.ReloadAsync(cancellationToken);
 
@@ -58,6 +76,25 @@ public sealed class AppStartupService : IHostedService
             && !string.IsNullOrWhiteSpace(_settings.Current.UpdateFeedUrl))
         {
             _ = CheckUpdatesInBackgroundAsync();
+        }
+    }
+
+    private void TryEnsureAutoStart()
+    {
+        try
+        {
+            if (_settings.Current.StartWithWindows)
+            {
+                _autoStart.EnsureEnabled();
+            }
+            else if (_autoStart.IsEnabled)
+            {
+                _autoStart.SetEnabled(false);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Could not reconcile the auto-start entry.");
         }
     }
 

@@ -7,8 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="themes\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="plugin.json"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="themes\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
   </ItemGroup>
 
   <Target Name="CopyPluginToApp" AfterTargets="Build">

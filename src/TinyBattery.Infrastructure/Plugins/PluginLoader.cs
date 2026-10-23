@@ -6,7 +6,7 @@ using TinyBattery.Abstractions.Protocols;
 
 namespace TinyBattery.Infrastructure.Plugins;
 
-public sealed class PluginLoader : IPluginLoader
+public sealed class PluginLoader : IPluginLoader, IBuiltInPluginRegistrar
 {
     private const int SupportedApiMajor = 1;
 
@@ -17,6 +17,8 @@ public sealed class PluginLoader : IPluginLoader
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<PluginLoader> _logger;
     private readonly List<PluginLoadContext> _contexts = [];
+    private readonly HashSet<string> _loadedPluginIds =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public PluginLoader(
         IAppPaths paths,
@@ -36,7 +38,6 @@ public sealed class PluginLoader : IPluginLoader
 
     public Task LoadAsync(CancellationToken ct)
     {
-        var loadedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var visitedDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var root in GetRoots())
@@ -55,13 +56,13 @@ public sealed class PluginLoader : IPluginLoader
                     continue;
                 }
 
-                ProcessPlugin(directory, loadedIds);
+                ProcessPlugin(directory, _loadedPluginIds);
             }
         }
 
         _logger.LogInformation(
             "Loaded {PluginCount} plugin(s), {ProtocolCount} protocol(s), {ThemeCount} theme manifest(s), {DiagnosticCount} diagnostic(s).",
-            loadedIds.Count,
+            _loadedPluginIds.Count,
             _catalog.Protocols.Count,
             _catalog.ThemeManifestPaths.Count,
             _catalog.Diagnostics.Count);
@@ -69,10 +70,62 @@ public sealed class PluginLoader : IPluginLoader
         return Task.CompletedTask;
     }
 
+    public void Register(ITinyBatteryPlugin plugin, string pluginDirectory)
+    {
+        if (plugin.ApiVersion.Major != SupportedApiMajor)
+        {
+            AddDiagnostic(
+                pluginDirectory,
+                $"Built-in plugin '{plugin.Id}' targets API {plugin.ApiVersion}; "
+                + $"this host supports {SupportedApiMajor}.x.");
+            return;
+        }
+
+        if (!_loadedPluginIds.Add(plugin.Id))
+        {
+            return;
+        }
+
+        try
+        {
+            var context = new PluginContext(pluginDirectory, _loggerFactory);
+            var registrar = new PluginRegistrar(
+                _catalog,
+                _registry,
+                pluginDirectory,
+                _loggerFactory.CreateLogger($"Plugin.{plugin.Id}"));
+            plugin.Register(context, registrar);
+            _logger.LogInformation(
+                "Registered built-in plugin '{PluginId}' from '{Directory}'.",
+                plugin.Id,
+                pluginDirectory);
+        }
+        catch (Exception exception)
+        {
+            _loadedPluginIds.Remove(plugin.Id);
+            AddDiagnostic(pluginDirectory, exception.Message);
+            _logger.LogError(
+                exception,
+                "Built-in plugin '{PluginId}' failed to register.",
+                plugin.Id);
+        }
+    }
+
     private IEnumerable<string> GetRoots()
     {
         yield return _paths.PluginsDirectory;
+        yield return PortablePluginsDirectory();
         yield return Path.Combine(AppContext.BaseDirectory, "plugins");
+    }
+
+    public static string PortablePluginsDirectory()
+    {
+        var executableDirectory = Path.GetDirectoryName(Environment.ProcessPath);
+        return Path.Combine(
+            string.IsNullOrWhiteSpace(executableDirectory)
+                ? AppContext.BaseDirectory
+                : executableDirectory,
+            "plugins");
     }
 
     private static IEnumerable<string> EnumeratePluginDirectories(string root)

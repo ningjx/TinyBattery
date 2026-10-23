@@ -11,8 +11,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="devices\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="plugin.json"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="devices\*.json"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
   </ItemGroup>
 
   <Target Name="CopyPluginToApp" AfterTargets="Build">

@@ -25,4 +25,11 @@ internal sealed class FakePluginAssetCatalog : IPluginAssetCatalog
     public IReadOnlyList<IBatteryIconThemePlugin> ThemePlugins => IconThemes;
 
     public IReadOnlyList<PluginDiagnostic> Diagnostics => PluginDiagnostics;
+
+    public void AddDeviceDefinitionPath(string path) => DeviceDefinitions.Add(path);
+
+    public void AddThemeManifestPath(string path) => ThemeManifests.Add(path);
+
+    public void AddDiagnostic(string source, string message) =>
+        PluginDiagnostics.Add(new PluginDiagnostic(source, message));
 }
