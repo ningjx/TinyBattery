@@ -28,7 +28,7 @@
                 BorderBrush="{StaticResource WindowBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="14">
-            <Grid Margin="24,20,20,20">
+            <Grid Margin="12,10,10,10">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
@@ -57,7 +57,7 @@
                     </Border>
 
                     <StackPanel Grid.Column="1"
-                                Margin="13,0,0,0"
+                                Margin="7,0,0,0"
                                 VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource PageTitle}" Text="TinyBattery" />
                         <TextBlock Margin="1,2,0,0"
@@ -113,7 +113,7 @@
                     </StackPanel>
                 </Grid>
 
-                <Grid Grid.Row="1" Margin="0,18,4,0">
+                <Grid Grid.Row="1" Margin="0,9,2,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="380" />
                         <ColumnDefinition Width="16" />
@@ -123,7 +123,7 @@
                     <Border Grid.Column="0" Style="{StaticResource Card}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="电池图标" />
-                            <TextBlock Margin="0,3,0,10"
+                            <TextBlock Margin="0,3,0,6"
                                        Style="{StaticResource Caption}"
                                        Text="选择托盘图标使用的外观" />
 
@@ -167,8 +167,8 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
 
-                            <Border Margin="0,12,0,0"
-                                    Padding="12"
+                            <Border Margin="0,6,0,0"
+                                    Padding="8"
                                     Background="{StaticResource SubtleBrush}"
                                     BorderBrush="#10000000"
                                     BorderThickness="1"
@@ -191,7 +191,7 @@
                                                RenderOptions.BitmapScalingMode="HighQuality" />
                                     </Border>
                                     <StackPanel Grid.Column="1"
-                                                Margin="13,0,0,0"
+                                                Margin="7,0,0,0"
                                                 VerticalAlignment="Center">
                                         <TextBlock x:Name="ThemeNameText"
                                                    FontSize="14"
@@ -236,7 +236,7 @@
                             </Grid>
                             <TextBlock Grid.Row="1"
                                        x:Name="DeviceHintText"
-                                       Margin="0,3,0,10"
+                                       Margin="0,3,0,6"
                                        Style="{StaticResource Caption}"
                                        Text="选择托盘图标显示的设备" />
 
@@ -249,7 +249,7 @@
 
                             <Border Grid.Row="3"
                                     Height="1"
-                                    Margin="0,12"
+                                    Margin="0,6"
                                     Background="{StaticResource DividerBrush}" />
 
                             <Grid Grid.Row="4">
@@ -264,13 +264,13 @@
                             </Grid>
 
                             <ScrollViewer Grid.Row="5"
-                                          Margin="0,6,0,0"
+                                          Margin="0,4,0,0"
                                           HorizontalScrollBarVisibility="Disabled"
                                           VerticalScrollBarVisibility="Auto">
                                 <ItemsControl x:Name="DeviceList">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Margin="10,6">
+                                            <Grid Margin="6,4">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
@@ -301,7 +301,7 @@
 
                             <TextBlock x:Name="DefinitionCountText"
                                        Grid.Row="6"
-                                       Margin="0,8,0,0"
+                                       Margin="0,4,0,0"
                                        Style="{StaticResource MetaText}"
                                        TextTrimming="CharacterEllipsis" />
                         </Grid>
@@ -309,8 +309,8 @@
                 </Grid>
 
                 <Border Grid.Row="2"
-                        Margin="0,16,4,0"
-                        Padding="16"
+                        Margin="0,8,2,0"
+                        Padding="8"
                         Style="{StaticResource Card}">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -332,7 +332,7 @@
                         </Grid>
 
                         <StackPanel Grid.Row="1"
-                                    Margin="0,10,0,0"
+                                    Margin="0,6,0,0"
                                     Orientation="Horizontal">
                             <Button Margin="0,0,8,0"
                                     Click="ImportPackage_Click"
@@ -348,8 +348,8 @@
                         </StackPanel>
 
                         <Border Grid.Row="2"
-                                Margin="0,10,0,0"
-                                Padding="9,7"
+                                Margin="0,6,0,0"
+                                Padding="8,6"
                                 Background="{StaticResource SubtleBrush}"
                                 CornerRadius="8">
                             <ScrollViewer MaxHeight="42"
