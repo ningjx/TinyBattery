@@ -331,7 +331,7 @@ public partial class SettingsWindow : Window
                 {
                     Style = (Style)FindResource("SoftComboBox"),
                     ItemsSource = options,
-                    DisplayMemberPath = nameof(DeviceOption.DisplayName),
+                    ItemTemplate = (DataTemplate)FindResource("DisplayNameTemplate"),
                     SelectedValuePath = nameof(DeviceOption.Id),
                     Height = 31,
                     Margin = new Thickness(6, 0, 0, 0),
@@ -726,5 +726,8 @@ public partial class SettingsWindow : Window
         string Percent,
         Brush Accent);
 
-    private sealed record DeviceOption(string? Id, string DisplayName);
+    private sealed record DeviceOption(string? Id, string DisplayName)
+    {
+        public override string ToString() => DisplayName;
+    }
 }

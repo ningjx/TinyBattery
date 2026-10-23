@@ -115,6 +115,11 @@
         <Setter Property="Background" Value="Transparent" />
     </Style>
 
+    <DataTemplate x:Key="DisplayNameTemplate">
+        <TextBlock Text="{Binding DisplayName}"
+                   TextTrimming="CharacterEllipsis" />
+    </DataTemplate>
+
     <Style x:Key="SoftComboBoxItem" TargetType="ComboBoxItem">
         <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
         <Setter Property="FontSize" Value="12.5" />
