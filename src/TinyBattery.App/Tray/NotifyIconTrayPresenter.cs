@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using H.NotifyIcon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -26,9 +27,13 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
     private readonly ILogger<NotifyIconTrayPresenter> _logger;
 
     private TaskbarIcon? _tray;
-    private MenuItem? _batteryItem;
-    private MenuItem? _devicesMenu;
+    private TextBlock? _batteryStatusText;
+    private MenuItem? _themeMenu;
+    private MenuItem? _displayMenu;
     private MenuItem? _updatesItem;
+    private Style? _menuItemStyle;
+    private Style? _statusItemStyle;
+    private Style? _separatorStyle;
     private SettingsWindow? _settingsWindow;
     private AboutWindow? _aboutWindow;
     private UpdateWindow? _updateWindow;
@@ -64,38 +69,48 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
             return;
         }
 
-        _batteryItem = new MenuItem
-        {
-            Header = _lastToolTip,
-            IsEnabled = false,
-        };
-        _devicesMenu = new MenuItem { Header = "设备" };
+        _menuItemStyle = Application.Current.TryFindResource("TrayMenuItem") as Style;
+        _statusItemStyle = Application.Current.TryFindResource("TrayStatusMenuItem") as Style;
+        _separatorStyle = Application.Current.TryFindResource("TraySeparator") as Style;
 
-        var reload = new MenuItem { Header = "重新加载设备配置" };
+        var batteryItem = new MenuItem
+        {
+            Header = BuildStatusHeader(),
+            IsEnabled = false,
+            Style = _statusItemStyle,
+        };
+        _themeMenu = NewMenuItem("主题");
+        _displayMenu = NewMenuItem("显示设备");
+
+        var reload = NewMenuItem("重新加载设备配置");
         reload.Click += async (_, _) => await ReloadDefinitionsAsync();
 
-        var settings = new MenuItem { Header = "设置" };
+        var settings = NewMenuItem("设置");
         settings.Click += (_, _) => ShowSettings();
 
-        var about = new MenuItem { Header = "关于 TinyBattery" };
+        var about = NewMenuItem("关于 TinyBattery");
         about.Click += (_, _) => ShowAbout();
 
-        var updates = new MenuItem { Header = "检查更新" };
+        var updates = NewMenuItem("检查更新");
         updates.Click += (_, _) => ShowUpdates();
         _updatesItem = updates;
 
-        var exit = new MenuItem { Header = "退出" };
+        var exit = NewMenuItem("退出");
         exit.Click += (_, _) => Application.Current.Shutdown();
 
-        var menu = new ContextMenu();
-        menu.Items.Add(_batteryItem);
-        menu.Items.Add(_devicesMenu);
-        menu.Items.Add(new Separator());
+        var menu = new ContextMenu
+        {
+            Style = Application.Current.TryFindResource("TrayContextMenu") as Style,
+        };
+        menu.Items.Add(batteryItem);
+        menu.Items.Add(_themeMenu);
+        menu.Items.Add(_displayMenu);
+        menu.Items.Add(NewSeparator());
         menu.Items.Add(reload);
         menu.Items.Add(settings);
         menu.Items.Add(updates);
         menu.Items.Add(about);
-        menu.Items.Add(new Separator());
+        menu.Items.Add(NewSeparator());
         menu.Items.Add(exit);
         menu.Opened += (_, _) => RefreshFromState();
 
@@ -170,9 +185,9 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
             ? _icons.GetDefaultIcon()
             : _icons.GetIcon(_lastFrame);
         _tray.ToolTipText = _lastToolTip;
-        if (_batteryItem is not null)
+        if (_batteryStatusText is not null)
         {
-            _batteryItem.Header = _lastToolTip;
+            _batteryStatusText.Text = _lastToolTip;
         }
     }
 
@@ -271,29 +286,246 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
             SetFrame(frame, tooltip);
         }
 
-        if (_devicesMenu is not null)
+        RebuildDynamicMenus(snapshots, theme, resolved);
+    }
+
+    private void RebuildDynamicMenus(
+        IReadOnlyList<DeviceSnapshot> snapshots,
+        IconThemeDescriptor theme,
+        TrayDisplayResult resolved)
+    {
+        if (_themeMenu is null || _displayMenu is null)
         {
-            _devicesMenu.Items.Clear();
-            if (snapshots.Count == 0)
+            return;
+        }
+
+        _themeMenu.Items.Clear();
+        _displayMenu.Items.Clear();
+
+        var svgThemes = _themes.Themes
+            .Where(candidate => candidate.Kind == IconThemeKind.Svg)
+            .OrderBy(candidate => candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        _themeMenu.Header = svgThemes.Length > 0
+            ? $"主题 · {(theme.Kind == IconThemeKind.Svg ? theme.DisplayName : "未选择")}"
+            : "主题";
+        if (svgThemes.Length == 0)
+        {
+            _themeMenu.Items.Add(DisabledItem("未安装 SVG 主题"));
+        }
+        else
+        {
+            foreach (var candidate in svgThemes)
             {
-                _devicesMenu.Items.Add(new MenuItem
-                {
-                    Header = "未发现设备",
-                    IsEnabled = false,
-                });
-            }
-            else
-            {
-                foreach (var snapshot in snapshots)
-                {
-                    _devicesMenu.Items.Add(new MenuItem
-                    {
-                        Header = BuildDeviceRow(snapshot),
-                        IsEnabled = false,
-                    });
-                }
+                var item = NewMenuItem(candidate.DisplayName);
+                item.IsCheckable = true;
+                item.IsChecked = string.Equals(
+                    candidate.Id,
+                    theme.Id,
+                    StringComparison.OrdinalIgnoreCase);
+                item.ToolTip = $"{candidate.SlotCount} 个槽位"
+                    + (string.IsNullOrWhiteSpace(candidate.Version)
+                        ? string.Empty
+                        : $" · v{candidate.Version}");
+                var themeId = candidate.Id;
+                item.Click += async (_, _) => await SelectThemeAsync(themeId);
+                _themeMenu.Items.Add(item);
             }
         }
+
+        var hasSvgTheme = theme.Kind == IconThemeKind.Svg;
+        _displayMenu.Header = hasSvgTheme && theme.SlotCount > 1
+            ? "显示设备 · 多设备"
+            : "显示设备";
+        _displayMenu.IsEnabled = hasSvgTheme;
+        if (!hasSvgTheme)
+        {
+            _displayMenu.Items.Add(DisabledItem("安装 SVG 主题后可配置"));
+            return;
+        }
+
+        var displayIds = _settings.Current.DisplayDeviceIds;
+        for (var index = 0; index < theme.Slots.Count; index++)
+        {
+            var slot = theme.Slots[index];
+            var assigned = index < displayIds.Count ? displayIds[index] : null;
+            if (theme.Slots.Count == 1)
+            {
+                AddSlotOptions(_displayMenu, index, assigned, snapshots);
+                continue;
+            }
+
+            var slotMenu = NewMenuItem(SlotHeader(slot, assigned, resolved, index));
+            AddSlotOptions(slotMenu, index, assigned, snapshots);
+            _displayMenu.Items.Add(slotMenu);
+        }
+    }
+
+    private void AddSlotOptions(
+        ItemsControl parent,
+        int slotIndex,
+        string? assigned,
+        IReadOnlyList<DeviceSnapshot> snapshots)
+    {
+        var auto = NewMenuItem("自动选择");
+        auto.IsCheckable = true;
+        auto.IsChecked = string.IsNullOrWhiteSpace(assigned);
+        auto.Click += async (_, _) => await AssignSlotAsync(slotIndex, null);
+        parent.Items.Add(auto);
+        parent.Items.Add(NewSeparator());
+
+        if (snapshots.Count == 0)
+        {
+            parent.Items.Add(DisabledItem("未发现设备"));
+            return;
+        }
+
+        var matchFound = false;
+        foreach (var snapshot in snapshots)
+        {
+            var isAssigned = string.Equals(
+                assigned,
+                snapshot.LogicalDeviceId,
+                StringComparison.OrdinalIgnoreCase);
+            matchFound |= isAssigned;
+            var item = NewMenuItem(BuildDeviceOptionLabel(snapshot));
+            item.IsCheckable = true;
+            item.IsChecked = isAssigned;
+            var deviceId = snapshot.LogicalDeviceId;
+            item.Click += async (_, _) => await AssignSlotAsync(slotIndex, deviceId);
+            parent.Items.Add(item);
+        }
+
+        if (!string.IsNullOrWhiteSpace(assigned) && !matchFound)
+        {
+            var missing = NewMenuItem($"{assigned}（未连接）");
+            missing.IsCheckable = true;
+            missing.IsChecked = true;
+            missing.IsEnabled = false;
+            parent.Items.Add(missing);
+        }
+    }
+
+    private string SlotHeader(
+        IconThemeSlot slot,
+        string? assigned,
+        TrayDisplayResult resolved,
+        int index)
+    {
+        var label = string.IsNullOrWhiteSpace(slot.Label)
+            ? $"设备 {index + 1}"
+            : slot.Label;
+        var snapshot = index < resolved.Slots.Count ? resolved.Slots[index] : null;
+        if (snapshot is null)
+        {
+            return $"{label} · 未选择";
+        }
+
+        return $"{label} · {BuildDeviceOptionLabel(snapshot)}";
+    }
+
+    private static string BuildDeviceOptionLabel(DeviceSnapshot snapshot)
+    {
+        var text = snapshot.DisplayName;
+        if (snapshot.Battery?.Percent is int percent)
+        {
+            text += $" · {percent}%";
+        }
+        else if (snapshot.Battery?.VoltageMv is { } voltage)
+        {
+            text += $" · {voltage / 1000:0.00} V";
+        }
+
+        if (snapshot.Battery?.Charging is ChargingState.Charging)
+        {
+            text += " · 充电中";
+        }
+        else if (snapshot.Battery?.Charging is ChargingState.Full)
+        {
+            text += " · 已充满";
+        }
+
+        return text;
+    }
+
+    private async Task SelectThemeAsync(string themeId)
+    {
+        try
+        {
+            await _themes.SelectAsync(themeId, CancellationToken.None);
+            RefreshFromState();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Could not select theme '{ThemeId}'.", themeId);
+        }
+    }
+
+    private async Task AssignSlotAsync(int slotIndex, string? deviceId)
+    {
+        try
+        {
+            var ids = _settings.Current.DisplayDeviceIds;
+            while (ids.Count <= slotIndex)
+            {
+                ids.Add(string.Empty);
+            }
+
+            ids[slotIndex] = deviceId ?? string.Empty;
+            _settings.Current.PrimaryDeviceId = ids.FirstOrDefault(
+                id => !string.IsNullOrWhiteSpace(id));
+            await _settings.SaveAsync(_settings.Current, CancellationToken.None);
+            RefreshFromState();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Could not assign slot {SlotIndex}.",
+                slotIndex);
+        }
+    }
+
+    private MenuItem NewMenuItem(string header) =>
+        new()
+        {
+            Header = header,
+            Style = _menuItemStyle,
+        };
+
+    private MenuItem DisabledItem(string header)
+    {
+        var item = NewMenuItem(header);
+        item.IsEnabled = false;
+        return item;
+    }
+
+    private Separator NewSeparator() => new() { Style = _separatorStyle };
+
+    private StackPanel BuildStatusHeader()
+    {
+        var primary = Application.Current.TryFindResource("TextPrimaryBrush") as Brush
+            ?? Brushes.Black;
+        var secondary = Application.Current.TryFindResource("TextSecondaryBrush") as Brush
+            ?? Brushes.Gray;
+        var panel = new StackPanel { Margin = new Thickness(0, 1, 0, 1) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "TinyBattery",
+            FontSize = 11,
+            Foreground = secondary,
+        });
+        _batteryStatusText = new TextBlock
+        {
+            Text = _lastToolTip,
+            FontSize = 13,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = primary,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            MaxWidth = 280,
+        };
+        panel.Children.Add(_batteryStatusText);
+        return panel;
     }
 
     private static string BuildToolTip(
@@ -388,30 +620,6 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
         return text;
     }
 
-    private static string BuildDeviceRow(DeviceSnapshot snapshot)
-    {
-        var text = snapshot.DisplayName;
-        if (snapshot.Battery?.Percent is int percent)
-        {
-            text += $"  {percent}%";
-        }
-        else if (snapshot.Battery?.VoltageMv is { } voltage)
-        {
-            text += $"  {voltage:0} mV";
-        }
-        else
-        {
-            text += "  --";
-        }
-
-        if (snapshot.Battery?.Charging is ChargingState.Charging)
-        {
-            text += "  充电中";
-        }
-
-        return text;
-    }
-
     private void OnThemeChanged(object? sender, EventArgs e)
     {
         var dispatcher = Application.Current.Dispatcher;
@@ -454,10 +662,7 @@ public sealed class NotifyIconTrayPresenter : ITrayPresenter
     private async Task ReloadDefinitionsAsync()
     {
         await _definitions.ReloadAsync(CancellationToken.None);
-        if (_batteryItem is not null)
-        {
-            _batteryItem.Header = $"已加载 {_definitions.Definitions.Count} 个设备定义";
-        }
+        RefreshFromState();
     }
 
     private void ShowSettings()
