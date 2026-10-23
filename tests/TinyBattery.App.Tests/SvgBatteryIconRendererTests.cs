@@ -92,6 +92,34 @@ public sealed class SvgBatteryIconRendererTests
     }
 
     [Fact]
+    public void SectorFill_RendersHalfCircle()
+    {
+        var root = CreateRoot();
+        try
+        {
+            var path = WriteSvg(root, """
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                  <defs>
+                    <circle id="tb-sector" cx="16" cy="16" r="10" fill="none" stroke-width="2" />
+                  </defs>
+                </svg>
+                """);
+            using var renderer = CreateRenderer(
+                path,
+                new IconThemeSlot("main", null, IconFillMode.Sector, "tb-sector"));
+
+            using var bitmap = renderer.RenderBitmap(Frame(50), 32);
+
+            Assert.True(bitmap.GetPixel(20, 16).G > 200);
+            Assert.Equal(0, bitmap.GetPixel(8, 16).A);
+        }
+        finally
+        {
+            DeleteRoot(root);
+        }
+    }
+
+    [Fact]
     public void TwoSlots_RenderIndependently()
     {
         var root = CreateRoot();
