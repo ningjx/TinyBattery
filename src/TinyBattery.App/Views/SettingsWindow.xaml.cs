@@ -102,7 +102,7 @@ public partial class SettingsWindow : Window
         {
             await _definitions.ReloadAsync(CancellationToken.None);
             await _themes.ReloadAsync(CancellationToken.None);
-            BuildThemes();
+            await BuildThemesAsync();
             BuildLiveDevices();
             BuildSlots();
             BuildDefinitionSummary();
@@ -118,42 +118,55 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void BuildThemes()
+    private async Task BuildThemesAsync()
     {
         var rows = _themes.Themes
+            .Where(theme => theme.Kind == IconThemeKind.Svg)
             .Select(theme => CreateThemeRow(theme))
             .ToArray();
         ThemeList.ItemsSource = rows;
 
         var selected = rows.FirstOrDefault(row => string.Equals(
-                row.Descriptor.Id,
-                _themes.Selected.Id,
-                StringComparison.OrdinalIgnoreCase))
-            ?? rows.FirstOrDefault();
+            row.Descriptor.Id,
+            _themes.Selected.Id,
+            StringComparison.OrdinalIgnoreCase));
+        if (selected is null && rows.Length > 0)
+        {
+            selected = rows[0];
+            await _themes.SelectAsync(selected.Descriptor.Id, CancellationToken.None);
+        }
+
         ThemeList.SelectedItem = selected;
 
         if (selected is not null)
         {
             ApplyThemeDetail(selected.Descriptor);
         }
+        else
+        {
+            ShowEmptyThemeState();
+        }
+    }
+
+    private void ShowEmptyThemeState()
+    {
+        ThemePreview.Source = FromIcon(_icons.GetDefaultIcon(80));
+        HeaderIcon.Source = FromIcon(_icons.GetDefaultIcon(32));
+        ThemeNameText.Text = "未安装 SVG 主题";
+        ThemeDescriptionText.Text = "导入 .tbpack，或把主题文件夹放入 themes 目录。";
+        ThemeMetaText.Text = "托盘当前使用程序默认图标";
+        Icon = FromIcon(_icons.GetDefaultIcon(32));
     }
 
     private ThemeRow CreateThemeRow(IconThemeDescriptor theme)
     {
-        var isFallback = string.Equals(
-            theme.Id,
-            IconThemeDescriptor.FallbackId,
-            StringComparison.OrdinalIgnoreCase);
-        var name = isFallback ? "程序默认图标" : theme.DisplayName;
-        var subtitle = isFallback
-            ? "未安装可用主题时自动使用"
-            : $"{KindLabel(theme.Kind)} · {theme.SlotCount} 个槽位"
-                + (string.IsNullOrWhiteSpace(theme.Author)
-                    ? string.Empty
-                    : $" · {theme.Author}");
+        var subtitle = $"SVG · {theme.SlotCount} 个槽位"
+            + (string.IsNullOrWhiteSpace(theme.Author)
+                ? string.Empty
+                : $" · {theme.Author}");
         return new ThemeRow(
             theme,
-            name,
+            theme.DisplayName,
             subtitle,
             RenderThemePreview(theme, 32));
     }
@@ -255,6 +268,14 @@ public partial class SettingsWindow : Window
         try
         {
             var theme = _themes.Selected;
+            if (theme.Kind != IconThemeKind.Svg)
+            {
+                SlotPanel.Children.Clear();
+                DeviceCountText.Text = "未安装主题";
+                DeviceHintText.Text = "安装 SVG 主题后可配置显示设备";
+                return;
+            }
+
             var snapshots = _state.Snapshot()
                 .OrderBy(snapshot => snapshot.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToArray();

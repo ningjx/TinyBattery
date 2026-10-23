@@ -3,17 +3,27 @@
   "schemaVersion": 1,
   "id": "classic-blue",
   "name": "Classic Blue",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "TinyBattery",
-  "description": "Classic vector battery icon with a blue healthy color.",
-  "kind": "classic",
-  "classic": {
-    "healthyThreshold": 60,
-    "warningThreshold": 20,
-    "healthyColor": "#2F80ED",
-    "warningColor": "#F2994A",
-    "criticalColor": "#EB5757",
-    "unknownColor": "#828282",
-    "unknownFillRatio": 0.35
+  "description": "Classic SVG battery icon with a blue healthy color.",
+  "kind": "svg",
+  "slotCount": 1,
+  "render": {
+    "svg": "icon.svg",
+    "fillDirection": "horizontal",
+    "colors": {
+      "healthy": "#2F80ED",
+      "warning": "#F2994A",
+      "critical": "#EB5757",
+      "unknown": "#828282"
+    },
+    "slots": [
+      {
+        "id": "main",
+        "label": "设备",
+        "mode": "rect",
+        "target": "tb-fill"
+      }
+    ]
   }
 }

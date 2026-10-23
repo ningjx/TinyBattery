@@ -196,19 +196,35 @@ public sealed class SvgBatteryIconRenderer : IBatteryIconRenderer
         }
     }
 
-    private static void DrawRectFill(
+    private void DrawRectFill(
         SKCanvas canvas,
         SlotGeometry geometry,
         float fraction,
         SKColor color)
     {
         var rect = geometry.Rect;
-        var height = rect.Height * fraction;
-        var fill = new SKRect(
-            rect.Left,
-            rect.Bottom - height,
-            rect.Right,
-            rect.Bottom);
+        SKRect fill;
+        if (string.Equals(
+                _options.FillDirection,
+                "horizontal",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            fill = new SKRect(
+                rect.Left,
+                rect.Top,
+                rect.Left + rect.Width * fraction,
+                rect.Bottom);
+        }
+        else
+        {
+            var height = rect.Height * fraction;
+            fill = new SKRect(
+                rect.Left,
+                rect.Bottom - height,
+                rect.Right,
+                rect.Bottom);
+        }
+
         using var paint = new SKPaint
         {
             Color = color,

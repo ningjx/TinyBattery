@@ -92,6 +92,35 @@ public sealed class SvgBatteryIconRendererTests
     }
 
     [Fact]
+    public void RectFill_HonorsHorizontalDirection()
+    {
+        var root = CreateRoot();
+        try
+        {
+            var path = WriteSvg(root, """
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                  <defs>
+                    <rect id="tb-fill" x="4" y="4" width="24" height="24" />
+                  </defs>
+                </svg>
+                """);
+            using var renderer = CreateRenderer(
+                path,
+                new IconThemeSlot("main", null, IconFillMode.Rect, "tb-fill"),
+                fillDirection: "horizontal");
+
+            using var bitmap = renderer.RenderBitmap(Frame(50), 32);
+
+            Assert.True(bitmap.GetPixel(8, 16).G > 200);
+            Assert.Equal(0, bitmap.GetPixel(24, 16).A);
+        }
+        finally
+        {
+            DeleteRoot(root);
+        }
+    }
+
+    [Fact]
     public void SectorFill_RendersHalfCircle()
     {
         var root = CreateRoot();
@@ -168,7 +197,8 @@ public sealed class SvgBatteryIconRendererTests
 
     private static SvgBatteryIconRenderer CreateRenderer(
         string svgPath,
-        IconThemeSlot slot)
+        IconThemeSlot slot,
+        string fillDirection = "vertical")
     {
         var theme = new IconThemeDescriptor(
             "test",
@@ -180,7 +210,8 @@ public sealed class SvgBatteryIconRendererTests
             Svg: new SvgThemeOptions(
                 svgPath,
                 [slot],
-                new ThemeColorSet(Healthy: "#00FF00", Warning: "#00FF00")));
+                new ThemeColorSet(Healthy: "#00FF00", Warning: "#00FF00"),
+                FillDirection: fillDirection));
         return new SvgBatteryIconRenderer(theme);
     }
 

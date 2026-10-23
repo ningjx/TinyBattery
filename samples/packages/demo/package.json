@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "id": "example.demo-package",
   "name": "TinyBattery Demo Package",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "TinyBattery",
   "description": "Example package with one disabled device definition and one classic theme.",
   "minAppVersion": "0.1.0",
@@ -17,7 +17,7 @@
   "themes": [
     {
       "id": "classic-blue",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "path": "themes/classic-blue"
     }
   ]

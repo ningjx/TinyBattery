@@ -79,6 +79,8 @@ public sealed class SvgRenderManifest
 
     public double? InnerRadius { get; init; }
 
+    public string? FillDirection { get; init; }
+
     public Dictionary<string, string>? States { get; init; }
 }
 

@@ -63,6 +63,15 @@ public sealed class JsonIconThemeStore : IIconThemeStore
             {
                 ct.ThrowIfCancellationRequested();
                 var theme = plugin.Describe();
+                if (theme.Kind != IconThemeKind.Svg)
+                {
+                    _logger.LogInformation(
+                        "Ignoring legacy plugin theme '{ThemeId}' ({Kind}).",
+                        theme.Id,
+                        theme.Kind);
+                    continue;
+                }
+
                 if (string.Equals(theme.Id, "fallback", StringComparison.OrdinalIgnoreCase))
                 {
                     diagnostics.Add(new ThemeDiagnostic(
@@ -164,6 +173,15 @@ public sealed class JsonIconThemeStore : IIconThemeStore
 
         if (theme is null)
         {
+            return;
+        }
+
+        if (theme.Kind != IconThemeKind.Svg)
+        {
+            _logger.LogInformation(
+                "Ignoring legacy theme '{Path}' ({Kind}); only SVG themes are selectable.",
+                manifestPath,
+                theme.Kind);
             return;
         }
 

@@ -29,4 +29,5 @@ public sealed record SvgThemeOptions(
     IReadOnlyDictionary<string, string>? StateOverrides = null,
     double StartAngle = -90,
     bool Clockwise = true,
-    double InnerRadius = 0);
+    double InnerRadius = 0,
+    string FillDirection = "vertical");

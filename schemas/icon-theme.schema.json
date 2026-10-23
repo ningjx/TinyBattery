@@ -70,6 +70,7 @@
         "startAngle": { "type": "number", "minimum": -360, "maximum": 360 },
         "clockwise": { "type": "boolean", "default": true },
         "innerRadius": { "type": "number", "minimum": 0, "maximum": 1024 },
+        "fillDirection": { "enum": ["vertical", "horizontal"], "default": "vertical" },
         "states": {
           "type": "object",
           "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 512 },

@@ -338,7 +338,13 @@ public sealed class IconThemeLoader
             states,
             render.StartAngle ?? -90,
             render.Clockwise ?? true,
-            render.InnerRadius ?? 0);
+            render.InnerRadius ?? 0,
+            string.Equals(
+                render.FillDirection,
+                "horizontal",
+                StringComparison.OrdinalIgnoreCase)
+                ? "horizontal"
+                : "vertical");
     }
 
     private static bool errorListHasErrors(List<string> errors) => errors.Count > 0;

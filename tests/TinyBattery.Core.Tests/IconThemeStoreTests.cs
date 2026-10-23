@@ -140,13 +140,29 @@ public sealed class IconThemeStoreTests
         var directory = Path.Combine(themesRoot, id);
         Directory.CreateDirectory(directory);
         File.WriteAllText(
+            Path.Combine(directory, "icon.svg"),
+            """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+              <defs>
+                <rect id="tb-fill" x="4" y="4" width="24" height="24" />
+              </defs>
+            </svg>
+            """);
+        File.WriteAllText(
             Path.Combine(directory, "theme.json"),
             $$"""
             {
               "schemaVersion": 1,
               "id": "{{id}}",
               "name": "{{name}}",
-              "kind": "classic"
+              "kind": "svg",
+              "slotCount": 1,
+              "render": {
+                "svg": "icon.svg",
+                "slots": [
+                  { "id": "main", "mode": "rect", "target": "tb-fill" }
+                ]
+              }
             }
             """);
     }
