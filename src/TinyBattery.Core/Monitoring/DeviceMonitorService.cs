@@ -1,6 +1,8 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TinyBattery.Abstractions.Devices;
+using TinyBattery.Abstractions.Monitoring;
 using TinyBattery.Abstractions.Protocols;
 using TinyBattery.Abstractions.Registry;
 using TinyBattery.Abstractions.State;
@@ -8,7 +10,7 @@ using TinyBattery.Abstractions.Transports;
 
 namespace TinyBattery.Core.Monitoring;
 
-public sealed class DeviceMonitorService : IHostedService
+public sealed class DeviceMonitorService : IHostedService, IDeviceRefreshCoordinator
 {
     private readonly IReadOnlyList<IDeviceTransport> _transports;
     private readonly IDeviceMatcher _matcher;
@@ -16,7 +18,7 @@ public sealed class DeviceMonitorService : IHostedService
     private readonly IBatteryStateStore _state;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<DeviceMonitorService> _logger;
-    private readonly Dictionary<string, DeviceSession> _sessions =
+    private readonly ConcurrentDictionary<string, DeviceSession> _sessions =
         new(StringComparer.OrdinalIgnoreCase);
 
     private CancellationTokenSource? _cts;
@@ -43,6 +45,14 @@ public sealed class DeviceMonitorService : IHostedService
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _loop = Task.Run(() => RunAsync(_cts.Token));
         return Task.CompletedTask;
+    }
+
+    public void RequestRefresh()
+    {
+        foreach (var session in _sessions.Values)
+        {
+            session.RequestRefresh();
+        }
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -132,7 +142,7 @@ public sealed class DeviceMonitorService : IHostedService
                 continue;
             }
 
-            _sessions.Remove(stableId);
+            _sessions.TryRemove(stableId, out _);
             await session.DisposeAsync();
         }
 

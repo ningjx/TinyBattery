@@ -1,5 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using TinyBattery.Abstractions.Monitoring;
+using TinyBattery.App.Monitoring;
 using TinyBattery.App.Plugins;
 using TinyBattery.App.Rendering;
 using TinyBattery.App.Tray;
@@ -30,7 +33,12 @@ public static class AppServiceCollectionExtensions
         services.TryAddSingleton<BundledPluginInstaller>();
 
         services.AddHostedService<AppStartupService>();
-        services.AddHostedService<DeviceMonitorService>();
+        services.TryAddSingleton<DeviceMonitorService>();
+        services.TryAddSingleton<IDeviceRefreshCoordinator>(
+            provider => provider.GetRequiredService<DeviceMonitorService>());
+        services.AddSingleton<IHostedService>(
+            provider => provider.GetRequiredService<DeviceMonitorService>());
+        services.AddHostedService<InputActivityMonitor>();
         services.AddHostedService<TrayHostedService>();
         services.AddTransient<SettingsWindow>();
         services.AddTransient<AboutWindow>();

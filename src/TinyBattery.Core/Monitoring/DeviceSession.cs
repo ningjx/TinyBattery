@@ -13,6 +13,7 @@ internal sealed class DeviceSession : IAsyncDisposable
     private readonly IBatteryStateStore _state;
     private readonly ILogger _logger;
     private readonly CancellationTokenSource _cts = new();
+    private readonly SemaphoreSlim _refreshSignal = new(0, 1);
     private readonly Dictionary<string, ProtocolReading> _lastReadings =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -49,6 +50,23 @@ internal sealed class DeviceSession : IAsyncDisposable
         _loop = Task.Run(() => RunAsync(_cts.Token));
     }
 
+    public void RequestRefresh()
+    {
+        try
+        {
+            if (_refreshSignal.CurrentCount == 0)
+            {
+                _refreshSignal.Release();
+            }
+        }
+        catch (SemaphoreFullException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         _cts.Cancel();
@@ -76,6 +94,7 @@ internal sealed class DeviceSession : IAsyncDisposable
 
         _lastReadings.Clear();
         _cts.Dispose();
+        _refreshSignal.Dispose();
     }
 
     private async Task RunAsync(CancellationToken ct)
@@ -95,6 +114,7 @@ internal sealed class DeviceSession : IAsyncDisposable
 
                 ApplyReadings(readings);
                 _failureCount = 0;
+                DrainRefresh();
                 await DelayAsync(ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -106,7 +126,7 @@ internal sealed class DeviceSession : IAsyncDisposable
                 ApplyFailure(exception);
                 _failureCount = Math.Min(_failureCount + 1, 8);
                 var backoffSeconds = Math.Min(
-                    300,
+                    30,
                     5 * Math.Pow(2, _failureCount - 1));
                 _logger.LogWarning(
                     exception,
@@ -117,7 +137,9 @@ internal sealed class DeviceSession : IAsyncDisposable
 
                 try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(backoffSeconds), ct);
+                    await _refreshSignal.WaitAsync(
+                        TimeSpan.FromSeconds(backoffSeconds),
+                        ct);
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
@@ -198,7 +220,20 @@ internal sealed class DeviceSession : IAsyncDisposable
         var jitter = jitterSeconds == 0
             ? TimeSpan.Zero
             : TimeSpan.FromSeconds(Random.Shared.Next(0, jitterSeconds + 1));
-        await Task.Delay(interval + jitter, ct);
+        await _refreshSignal.WaitAsync(interval + jitter, ct);
+    }
+
+    private void DrainRefresh()
+    {
+        try
+        {
+            while (_refreshSignal.Wait(0))
+            {
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+        }
     }
 
     private static DeviceConnectionState Classify(Exception exception) => exception switch
