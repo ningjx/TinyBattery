@@ -115,6 +115,13 @@ static Task<int> ValidateThemeAsync(string[] args)
         return Task.FromResult(1);
     }
 
+    if (theme.Kind != IconThemeKind.Svg)
+    {
+        Console.Error.WriteLine(
+            $"✗ {manifest}: theme kind '{theme.Kind}' is not supported; only SVG themes can be imported.");
+        return Task.FromResult(1);
+    }
+
     Console.WriteLine($"✓ {manifest}");
     Console.WriteLine($"  id: {theme.Id}");
     Console.WriteLine($"  name: {theme.DisplayName}");

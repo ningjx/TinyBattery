@@ -103,15 +103,7 @@ internal sealed class DeviceSession : IAsyncDisposable
         {
             try
             {
-                IReadOnlyList<ProtocolReading> readings;
-                await using (var connection = await _transport.OpenAsync(Candidate, ct))
-                {
-                    var protocol = _protocols.Resolve(Definition.Protocol.Kind);
-                    readings = await protocol.ReadAsync(
-                        new ProtocolContext(Candidate, connection, Definition),
-                        ct);
-                }
-
+                var readings = await ReadWithRetriesAsync(ct);
                 ApplyReadings(readings);
                 _failureCount = 0;
                 DrainRefresh();
@@ -147,6 +139,43 @@ internal sealed class DeviceSession : IAsyncDisposable
                 }
             }
         }
+    }
+
+    private async Task<IReadOnlyList<ProtocolReading>> ReadWithRetriesAsync(
+        CancellationToken ct)
+    {
+        var retry = Definition.Polling.Retry ?? new RetryOptions();
+        var attempts = Math.Clamp(retry.MaxAttempts, 1, 10);
+        var backoff = TimeSpan.FromMilliseconds(Math.Clamp(retry.BackoffMs, 0, 60000));
+        Exception? lastError = null;
+
+        for (var attempt = 1; attempt <= attempts; attempt++)
+        {
+            try
+            {
+                await using var connection = await _transport.OpenAsync(Candidate, ct);
+                var protocol = _protocols.Resolve(Definition.Protocol.Kind);
+                return await protocol.ReadAsync(
+                    new ProtocolContext(Candidate, connection, Definition),
+                    ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                lastError = exception;
+                if (attempt < attempts)
+                {
+                    await Task.Delay(backoff, ct);
+                }
+            }
+        }
+
+        throw lastError
+            ?? new InvalidOperationException(
+                $"Battery read for '{Definition.Id}' produced no result.");
     }
 
     private void ApplyReadings(IReadOnlyList<ProtocolReading> readings)

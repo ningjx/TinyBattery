@@ -29,8 +29,24 @@ public sealed class PackageImporterTests
                   "schemaVersion": 1,
                   "id": "blue",
                   "name": "Blue",
-                  "kind": "classic"
+                  "kind": "svg",
+                  "slotCount": 1,
+                  "render": {
+                    "svg": "icon.svg",
+                    "slots": [
+                      { "id": "main", "mode": "rect", "target": "tb-fill" }
+                    ]
+                  }
                 }
+                """);
+            await File.WriteAllTextAsync(
+                Path.Combine(package, "themes", "blue", "icon.svg"),
+                """
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                  <defs>
+                    <rect id="tb-fill" x="4" y="4" width="24" height="24" />
+                  </defs>
+                </svg>
                 """);
             await File.WriteAllTextAsync(
                 Path.Combine(package, "package.json"),

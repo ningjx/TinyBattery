@@ -176,13 +176,28 @@ public sealed class PluginLoader : IPluginLoader, IBuiltInPluginRegistrar
             return;
         }
 
-        if (!loadedIds.Add(manifest.Id))
+        if (loadedIds.Contains(manifest.Id))
         {
             AddDiagnostic(
                 manifestPath,
                 $"Plugin id '{manifest.Id}' is already loaded; skipping '{directory}'.");
             return;
         }
+
+        if (!string.IsNullOrWhiteSpace(manifest.ApiVersion))
+        {
+            if (!Version.TryParse(manifest.ApiVersion, out var manifestApi)
+                || manifestApi.Major != SupportedApiMajor)
+            {
+                AddDiagnostic(
+                    manifestPath,
+                    $"Plugin '{manifest.Id}' targets API {manifest.ApiVersion}; "
+                    + $"this host supports {SupportedApiMajor}.x.");
+                return;
+            }
+        }
+
+        loadedIds.Add(manifest.Id);
 
         try
         {

@@ -28,7 +28,7 @@ public sealed class IconThemeImporterTests
             Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
             var installed = Assert.Single(result.InstalledPaths);
             Assert.True(File.Exists(Path.Combine(installed, "theme.json")));
-            Assert.True(File.Exists(Path.Combine(installed, "preview.png")));
+            Assert.True(File.Exists(Path.Combine(installed, "icon.svg")));
         }
         finally
         {
@@ -132,6 +132,42 @@ public sealed class IconThemeImporterTests
         }
     }
 
+    [Fact]
+    public async Task ClassicTheme_IsRejected()
+    {
+        var root = CreateRoot();
+        try
+        {
+            var source = Path.Combine(root, "source");
+            Directory.CreateDirectory(source);
+            await File.WriteAllTextAsync(
+                Path.Combine(source, "theme.json"),
+                """
+                {
+                  "schemaVersion": 1,
+                  "id": "legacy",
+                  "name": "Legacy",
+                  "kind": "classic"
+                }
+                """);
+            var paths = new TestAppPaths(Path.Combine(root, "data"));
+            var importer = CreateImporter(paths);
+
+            var result = await importer.ImportAsync(
+                source,
+                new ImportOptions(),
+                CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Diagnostics, diagnostic =>
+                diagnostic.Contains("Only standard SVG", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteRoot(root);
+        }
+    }
+
     private static IconThemeImporter CreateImporter(TestAppPaths paths) =>
         new(
             paths,
@@ -151,11 +187,25 @@ public sealed class IconThemeImporterTests
               "schemaVersion": 1,
               "id": "{{id}}",
               "name": "{{id}}",
-              "kind": "classic",
-              "preview": "preview.png"
+              "kind": "svg",
+              "slotCount": 1,
+              "render": {
+                "svg": "icon.svg",
+                "slots": [
+                  { "id": "main", "mode": "rect", "target": "tb-fill" }
+                ]
+              }
             }
             """);
-        File.WriteAllBytes(Path.Combine(directory, "preview.png"), [0]);
+        File.WriteAllText(
+            Path.Combine(directory, "icon.svg"),
+            """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+              <defs>
+                <rect id="tb-fill" x="4" y="4" width="24" height="24" />
+              </defs>
+            </svg>
+            """);
     }
 
     private static string CreateRoot() =>

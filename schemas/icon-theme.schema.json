@@ -121,7 +121,7 @@
         "properties": { "kind": { "const": "svg" } },
         "required": ["kind"]
       },
-      "then": { "required": ["render"] }
+      "then": { "required": ["render", "slotCount"] }
     },
     {
       "if": {

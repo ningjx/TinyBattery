@@ -530,6 +530,14 @@ public sealed class PackageImporter : IPackageImporter
             return null;
         }
 
+        if (descriptor.Kind != IconThemeKind.Svg)
+        {
+            errors.Add(
+                $"{path}: legacy theme kind '{descriptor.Kind}' is not supported; "
+                + "use a standard SVG theme.");
+            return null;
+        }
+
         if (!string.IsNullOrWhiteSpace(item.Id)
             && !string.Equals(item.Id, descriptor.Id, StringComparison.OrdinalIgnoreCase))
         {

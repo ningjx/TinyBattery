@@ -54,17 +54,18 @@ public sealed class IconThemeImporter : IIconThemeImporter
                     "Theme id 'classic' is reserved for the built-in theme.");
             }
 
-            if (singleJson && theme.Kind != IconThemeKind.Classic)
+            if (singleJson)
             {
                 return ImportResult.Failure(
-                    "SVG and image themes must be imported as a folder or .tbpack archive.");
+                    "SVG themes must be imported as a folder or .tbpack archive, "
+                    + "so theme.json and its SVG files stay together.");
             }
 
-            if (theme.Kind == IconThemeKind.ImageSet)
+            if (theme.Kind != IconThemeKind.Svg)
             {
                 return ImportResult.Failure(
-                    "Image-set themes are no longer supported for new imports. "
-                    + "Use an SVG theme instead.");
+                    $"Theme kind '{theme.Kind}' is not supported. "
+                    + "Only standard SVG themes can be imported.");
             }
 
             var destination = Path.Combine(
